@@ -1,9 +1,30 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta http-equiv="refresh" content="0; url=./Concept_Demo/index.html" />
-  </head>
-  <body>
-    <p>Loading Tug of War... If it doesn't load, <a href="./Concept_Demo/index.html">click here</a>.</p>
-  </body>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="https://fav.farm/🪢" />
+    <title>Tug of War - Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#0a1628] text-white flex flex-col items-center justify-center h-screen">
+    <h1 class="text-5xl font-black mb-4 text-blue-400">TUG OF WAR</h1>
+    <p class="text-gray-400 mb-10 text-center">Select a version to play. Multiplayer versions require a backend server.</p>
+    
+    <div class="grid gap-6 w-full max-w-md px-4">
+        <a href="./Concept_Demo/index.html" class="block p-6 bg-gray-800 rounded-xl border border-gray-700 hover:border-red-500 transition group">
+            <h2 class="text-xl font-bold text-red-400 group-hover:text-red-300">Concept Demo</h2>
+            <p class="text-sm text-gray-400">The original local 2-player prototype (Shift to switch).</p>
+        </a>
+
+        <a href="./Multiplayer_Prototype/index.html" class="block p-6 bg-gray-800 rounded-xl border border-gray-700 hover:border-blue-500 transition group">
+            <h2 class="text-xl font-bold text-blue-400 group-hover:text-blue-300">Multiplayer Prototype</h2>
+            <p class="text-sm text-gray-400">Real-time room-based battle. Join a room and pull with your team.</p>
+        </a>
+
+        <div class="block p-6 bg-gray-900 rounded-xl border border-dashed border-gray-700 opacity-50 cursor-not-allowed">
+            <h2 class="text-xl font-bold text-gray-500">Dataset Pro (Coming Soon)</h2>
+            <p class="text-sm text-gray-500">Global dataset integration for advanced players.</p>
+        </div>
+    </div>
+</body>
 </html>
