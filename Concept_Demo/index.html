@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tug of Quiz</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: sans-serif; background: #0a1628; overflow: hidden; }
@@ -116,22 +115,6 @@
 </div>
 
 <script>
-
-   
-const socket = io("https://Aloharean-Tug-Of-Quiz.hf.space");
-
-
-function checkAns(side) {
-    if (val === cur.a.toLowerCase()) {
-        // Tell the server we pulled ;)
-        socket.emit('pull', { roomId: 'room1', team: side });
-    }
-}
-
-// Rope position catch
-socket.on('rope-moved', (newServerPos) => {
-    game.targetRopePos = newServerPos; 
-});
 const allQ = [
     {q:"7 + 8",a:"15"},{q:"9 × 6",a:"54"},{q:"100 − 37",a:"63"},{q:"√25",a:"5"},
     {q:"12 × 12",a:"144"},{q:"81 ÷ 9",a:"9"},{q:"6 × 7",a:"42"},{q:"144 ÷ 12",a:"12"},
