@@ -4,7 +4,7 @@
     <link rel="icon" href="https://fav.farm/🪢" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tug of Quiz</title>
+    <title>Tug of Quiz - Multiplayer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
@@ -15,67 +15,57 @@
             background: #0a1628; position: relative;
         }
         .panel {
-            position: absolute; top: 0; bottom: 0; width: 260px; display: flex; flex-direction: column;
-            padding: 20px; z-index: 10; gap: 10px;
+            position: absolute; top: 0; bottom: 0; width: 280px; display: flex; flex-direction: column;
+            padding: 20px; z-index: 10; gap: 10px; display: none; /* Hidden until team assigned */
         }
         #panel-red { 
             left: 0; 
-            background: rgba(10, 18, 40, 0.85); 
+            background: rgba(10, 18, 40, 0.9); 
             border-right: 1px solid rgba(239,68,68,0.3); 
-            justify-content: flex-start; /* Move Red panel upwards */
+            justify-content: flex-start;
             padding-top: 80px;
         }
         #panel-blue { 
             right: 0; 
-            background: rgba(10, 18, 40, 0.85); 
+            background: rgba(10, 18, 40, 0.9); 
             border-left: 1px solid rgba(59,130,246,0.3); 
-            justify-content: flex-end; /* Move Blue panel downwards */
+            justify-content: flex-end;
             padding-bottom: 80px;
         }
         .panel-label {
-            font-size: 11px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; text-align: center;
-            padding: 5px 10px; border-radius: 999px; margin-bottom: 4px;
+            font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-align: center;
+            padding: 6px 12px; border-radius: 999px; margin-bottom: 8px;
         }
-        .panel-label.red { background: rgba(239,68,68,0.15); color: #fca5a5; }
-        .panel-label.blue { background: rgba(59,130,246,0.15); color: #93c5fd; }
+        .panel-label.red { background: rgba(239,68,68,0.2); color: #fca5a5; }
+        .panel-label.blue { background: rgba(59,130,246,0.2); color: #93c5fd; }
         .q-text {
-            font-size: 17px; font-weight: 500; text-align: center; color: #e2e8f0;
-            min-height: 50px; display: flex; align-items: center; justify-content: center; line-height: 1.4;
+            font-size: 18px; font-weight: 600; text-align: center; color: #f8fafc;
+            min-height: 60px; display: flex; align-items: center; justify-content: center; line-height: 1.4;
         }
         .ans-input {
-            width: 100%; border: 1.5px solid rgba(255,255,255,0.15); border-radius: 8px;
-            padding: 10px 12px; font-size: 16px; text-align: center; background: rgba(255,255,255,0.07);
-            color: #f1f5f9; outline: none; transition: border-color 0.2s;
+            width: 100%; border: 2px solid rgba(255,255,255,0.1); border-radius: 12px;
+            padding: 12px; font-size: 18px; text-align: center; background: rgba(255,255,255,0.05);
+            color: #ffffff; outline: none; transition: all 0.2s;
         }
-        .ans-input:focus { border-color: rgba(255,255,255,0.4); }
-        .ans-input.red:focus { border-color: rgba(239,68,68,0.7); }
-        .ans-input.blue:focus { border-color: rgba(59,130,246,0.7); }
-        .feedback { height: 22px; font-size: 13px; font-weight: 500; text-align: center; }
+        .ans-input.red:focus { border-color: #ef4444; background: rgba(239,68,68,0.05); }
+        .ans-input.blue:focus { border-color: #3b82f6; background: rgba(59,130,246,0.05); }
+        .feedback { height: 24px; font-size: 14px; font-weight: 600; text-align: center; }
         .feedback.correct { color: #4ade80; }
         .feedback.wrong { color: #f87171; }
-        .shift-hint { font-size: 11px; color: rgba(255,255,255,0.3); text-align: center; margin-top: 2px; }
         
-        canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; cursor: default; }
+        canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
         
         #menu-overlay, #win-overlay {
             position: absolute; inset: 0; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 30;
-            background: rgba(10,18,40,0.96);
+            align-items: center; justify-content: center; z-index: 40;
+            background: rgba(10,18,40,0.98);
         }
-        .menu-title { font-size: 36px; font-weight: 700; color: #60a5fa; letter-spacing: 0.05em; margin-bottom: 8px; }
-        .menu-sub { font-size: 14px; color: #94a3b8; margin-bottom: 28px; text-align: center; max-width: 340px; line-height: 1.6; }
-        .menu-btn {
-            background: #1d4ed8; color: white; border: none; padding: 14px 36px;
-            border-radius: 8px; font-size: 16px; font-weight: 500;
-            cursor: pointer; transition: background 0.15s;
+        .room-input {
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+            color: white; padding: 12px; border-radius: 8px; width: 240px; text-align: center;
+            margin-bottom: 16px; font-size: 18px; outline: none;
         }
-        .menu-btn:hover { background: #2563eb; }
-        .win-title { font-size: 44px; font-weight: 700; margin-bottom: 12px; }
-        .win-sub { font-size: 15px; color: #94a3b8; margin-bottom: 28px; }
-        .score-row { display: flex; gap: 32px; margin-bottom: 28px; }
-        .score-box { text-align: center; }
-        .score-num { font-size: 32px; font-weight: 700; }
-        .score-lbl { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; }
+        .room-input:focus { border-color: #60a5fa; }
     </style>
 </head>
 <body>
@@ -83,66 +73,45 @@
 <div id="root">
     <canvas id="stage"></canvas>
 
+    <!-- Only one of these will be shown based on team -->
     <div class="panel" id="panel-red">
         <div class="panel-label red">Team Red (Top)</div>
-        <div class="q-text" id="q-red">—</div>
-        <input class="ans-input red" id="inp-red" type="text" placeholder="answer..." autocomplete="off" />
+        <div class="q-text" id="q-red">Waiting for room...</div>
+        <input class="ans-input red" id="inp-red" type="text" placeholder="type answer..." autocomplete="off" />
         <div class="feedback" id="fb-red"></div>
-        <div class="shift-hint">(Demo only) Press Shift to switch team focus</div>
     </div>
 
     <div class="panel" id="panel-blue">
         <div class="panel-label blue">Team Blue (Bottom)</div>
-        <div class="q-text" id="q-blue">—</div>
-        <input class="ans-input blue" id="inp-blue" type="text" placeholder="answer..." autocomplete="off" />
+        <div class="q-text" id="q-blue">Waiting for room...</div>
+        <input class="ans-input blue" id="inp-blue" type="text" placeholder="type answer..." autocomplete="off" />
         <div class="feedback" id="fb-blue"></div>
     </div>
 
     <div id="menu-overlay">
-        <div class="menu-title">Tug of Quiz</div>
-        <div class="menu-sub">Red pulls up, Blue pulls down. Answer correctly to pull the rope center towards your goal.</div>
-        <button class="menu-btn" id="start-btn">Start Game</button>
+        <h1 class="text-4xl font-bold text-blue-400 mb-2">Multiplayer Prototype</h1>
+        <p class="text-gray-400 mb-8">Enter a Room ID to join your teammates.</p>
+        <input type="text" id="room-id-input" class="room-input" placeholder="Room ID (e.g. 123)" maxlength="10">
+        <button class="bg-blue-600 text-white px-10 py-3 rounded-lg font-bold hover:bg-blue-700 transition" id="join-btn">Join Room</button>
     </div>
 
     <div id="win-overlay" style="display:none;">
-        <div class="win-title" id="win-title"></div>
-        <div class="win-sub">The rope center crossed the goal line!</div>
-        <div class="score-row">
-            <div class="score-box"><div class="score-num" id="score-red" style="color:#ef4444">0</div><div class="score-lbl">Red Correct</div></div>
-            <div class="score-box"><div class="score-num" id="score-blue" style="color:#3b82f6">0</div><div class="score-lbl">Blue Correct</div></div>
-        </div>
-        <button class="menu-btn" id="restart-btn">Play Again</button>
+        <h2 class="text-5xl font-black mb-4" id="win-title"></h2>
+        <p class="text-gray-400 mb-8">The rope has crossed the goal line!</p>
+        <button class="bg-white text-black px-10 py-3 rounded-lg font-bold hover:bg-gray-200 transition" onclick="location.reload()">Back to Menu</button>
     </div>
 </div>
 
 <script>
-
-   
+// --- SOCKET & GAME SETUP ---
 const socket = io("https://Aloharean-Tug-Of-Quiz.hf.space");
 
-
-function checkAns(side) {
-    if (val === cur.a.toLowerCase()) {
-        // Tell the server we pulled ;)
-        socket.emit('pull', { roomId: 'room1', team: side });
-    }
-}
-
-// Rope position catch
-socket.on('rope-moved', (newServerPos) => {
-    game.targetRopePos = newServerPos; 
-});
 const allQ = [
     {q:"7 + 8",a:"15"},{q:"9 × 6",a:"54"},{q:"100 − 37",a:"63"},{q:"√25",a:"5"},
-    {q:"12 × 12",a:"144"},{q:"81 ÷ 9",a:"9"},{q:"6 × 7",a:"42"},{q:"144 ÷ 12",a:"12"},
-    {q:"2⁸",a:"256"},{q:"15 × 8",a:"120"},{q:"250 ÷ 5",a:"50"},{q:"13 + 29",a:"42"},
+    {q:"12 × 12",a:"144"},{q:"81 ÷ 9",a:"9"},{q:"6 × 7",a:"42"},{q:"2⁸",a:"256"},
     {q:"Color of a banana?",a:"yellow"},{q:"Capital of France?",a:"paris"},
-    {q:"Capital of UK?",a:"london"},{q:"Opposite of 'day'?",a:"night"},
-    {q:"Legs on a cow?",a:"4"},{q:"Legs on a spider?",a:"8"},
-    {q:"Planets in solar system?",a:"8"},{q:"Continents on Earth?",a:"7"},
-    {q:"Largest ocean?",a:"pacific"},{q:"H₂O is?",a:"water"},
-    {q:"Fastest land animal?",a:"cheetah"},{q:"Boiling point of water (°C)?",a:"100"},
-    {q:"Hours in a day?",a:"24"},{q:"Months in a year?",a:"12"}
+    {q:"Opposite of 'day'?",a:"night"},{q:"Legs on a cow?",a:"4"},
+    {q:"Planets in solar system?",a:"8"},{q:"Fastest land animal?",a:"cheetah"}
 ];
 
 const canvas = document.getElementById('stage');
@@ -150,13 +119,84 @@ const ctx = canvas.getContext('2d');
 let W, H;
 
 const game = {
-    active: false, ropePos: 0, targetRopePos: 0,
-    winLimit: 180, raf: null,
-    usedQ: new Set(), curRed: null, curBlue: null,
-    scoreRed: 0, scoreBlue: 0,
-    lockRed: false, lockBlue: false,
+    active: false,
+    ropePos: 0,
+    targetRopePos: 0,
+    winLimit: 180,
+    roomId: null,
+    myTeam: null, // 'red' or 'blue'
+    redCount: 0,
+    blueCount: 0,
+    currentQ: null,
+    scoreRed: 0,
+    scoreBlue: 0
 };
 
+// --- MULTIPLAYER LOGIC ---
+const joinBtn = document.getElementById('join-btn');
+const roomIdInput = document.getElementById('room-id-input');
+
+joinBtn.onclick = () => {
+    const id = roomIdInput.value.trim();
+    if (!id) return;
+    game.roomId = id;
+    socket.emit('join-room', id);
+};
+
+socket.on('init-player', (data) => {
+    game.myTeam = data.team;
+    game.targetRopePos = data.ropeY;
+    game.ropePos = data.ropeY;
+    
+    document.getElementById('menu-overlay').style.display = 'none';
+    document.getElementById('panel-' + game.myTeam).style.display = 'flex';
+    
+    game.active = true;
+    nextQ();
+    resize();
+    animate();
+});
+
+socket.on('room-update', (data) => {
+    game.redCount = data.redCount || 1;
+    game.blueCount = data.blueCount || 1;
+});
+
+socket.on('rope-moved', (newY) => {
+    game.targetRopePos = newY;
+    if (Math.abs(newY) >= game.winLimit) {
+        endGame(newY < 0 ? 'Red' : 'Blue');
+    }
+});
+
+function nextQ() {
+    game.currentQ = allQ[Math.floor(Math.random() * allQ.length)];
+    const qEl = document.getElementById('q-' + game.myTeam);
+    const inp = document.getElementById('inp-' + game.myTeam);
+    const fb = document.getElementById('fb-' + game.myTeam);
+    
+    qEl.textContent = game.currentQ.q + " = ?";
+    inp.value = "";
+    fb.textContent = "";
+    inp.focus();
+}
+
+function checkAns() {
+    const inp = document.getElementById('inp-' + game.myTeam);
+    const fb = document.getElementById('fb-' + game.myTeam);
+    const val = inp.value.trim().toLowerCase();
+    
+    if (val === game.currentQ.a.toLowerCase()) {
+        fb.textContent = "✓ PULL!"; fb.className = "feedback correct";
+        socket.emit('pull', { roomId: game.roomId, team: game.myTeam });
+        setTimeout(nextQ, 600);
+    } else {
+        fb.textContent = "✗ WRONG"; fb.className = "feedback wrong";
+        inp.value = "";
+    }
+}
+
+// --- RENDERING ---
 function resize() {
     W = window.innerWidth;
     H = window.innerHeight;
@@ -164,192 +204,97 @@ function resize() {
     canvas.height = H;
 }
 
-function pickQ() {
-    if (game.usedQ.size >= allQ.length) game.usedQ.clear();
-    let avail = allQ.filter((_, i) => !game.usedQ.has(i));
-    const idx = allQ.indexOf(avail[Math.floor(Math.random() * avail.length)]);
-    game.usedQ.add(idx);
-    return allQ[idx];
-}
-
-function nextQ(side) {
-    const q = pickQ();
-    if (side === 'red') {
-        game.curRed = q;
-        document.getElementById('q-red').textContent = q.q + ' = ?';
-        document.getElementById('inp-red').value = '';
-        document.getElementById('fb-red').textContent = '';
-        game.lockRed = false;
-    } else {
-        game.curBlue = q;
-        document.getElementById('q-blue').textContent = q.q + ' = ?';
-        document.getElementById('inp-blue').value = '';
-        document.getElementById('fb-blue').textContent = '';
-        game.lockBlue = false;
-    }
-}
-
-function checkAns(side) {
-    if ((side === 'red' && game.lockRed) || (side === 'blue' && game.lockBlue)) return;
-    const inp = document.getElementById('inp-' + side);
-    const fb = document.getElementById('fb-' + side);
-    const cur = side === 'red' ? game.curRed : game.curBlue;
-    const val = inp.value.trim().toLowerCase();
-    if (!val) return;
-
-    if (val === cur.a.toLowerCase()) {
-        fb.textContent = '✓ correct!'; fb.className = 'feedback correct';
-        if (side === 'red') { 
-            game.targetRopePos -= 35; // Pull UP
-            game.scoreRed++; 
-            game.lockRed = true; 
-        } else { 
-            game.targetRopePos += 35; // Pull DOWN
-            game.scoreBlue++; 
-            game.lockBlue = true; 
-        }
-        if (Math.abs(game.targetRopePos) >= game.winLimit) { 
-            setTimeout(endGame, 600); 
-            return; 
-        }
-        setTimeout(() => nextQ(side), 800);
-    } else {
-        fb.textContent = '✗ try again'; fb.className = 'feedback wrong';
-        inp.value = '';
-    }
-}
-
-function startGame() {
-    game.usedQ.clear(); game.ropePos = 0; game.targetRopePos = 0;
-    game.scoreRed = 0; game.scoreBlue = 0; game.lockRed = false; game.lockBlue = false;
-    game.active = true;
-    document.getElementById('menu-overlay').style.display = 'none';
-    document.getElementById('win-overlay').style.display = 'none';
-    nextQ('red'); nextQ('blue');
-    document.getElementById('inp-red').focus();
-    resize();
-    if (!game.raf) animate();
-}
-
-function endGame() {
-    game.active = false;
-    const winner = game.targetRopePos < 0 ? 'Red' : 'Blue';
-    const wEl = document.getElementById('win-title');
-    wEl.textContent = winner + ' Wins!';
-    wEl.style.color = winner === 'Red' ? '#ef4444' : '#3b82f6';
-    document.getElementById('score-red').textContent = game.scoreRed;
-    document.getElementById('score-blue').textContent = game.scoreBlue;
-    document.getElementById('win-overlay').style.display = 'flex';
-}
-
-function drawPlayer(ropeX, y, color, isLeft) {
-    const radius = 30;
-    const bodyHeight = 50;
-    const offset = radius + 5; // Distance from rope center to body center
+function drawPlayer(ropeX, y, color, index) {
+    const radius = 25;
+    const bodyHeight = 45;
+    const isLeft = index % 2 === 0;
+    const offset = radius + 6;
     const playerX = isLeft ? ropeX - offset : ropeX + offset;
     
-    // Body (Bottom part of stadium)
+    // Body
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.roundRect(playerX - radius, y, radius * 2, bodyHeight, [0, 0, radius, radius]);
     ctx.fill();
 
-    // Head (Mustard Upper Semicircle)
+    // Head
     ctx.fillStyle = "#E1AD01";
     ctx.beginPath();
     ctx.arc(playerX, y, radius, Math.PI, 0);
     ctx.fill();
 
-    // Hands (Two small mustard circles on the rope)
+    // Hands - Always exactly on the rope
     ctx.fillStyle = "#E1AD01";
-    // Top hand
-    ctx.beginPath();
-    ctx.arc(ropeX, y + 12, 6, 0, Math.PI * 2);
-    ctx.fill();
-    // Bottom hand
-    ctx.beginPath();
-    ctx.arc(ropeX, y + 28, 6, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(ropeX, y + 12, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ropeX, y + 26, 5, 0, Math.PI * 2); ctx.fill();
 }
 
 function animate() {
+    if (!game.active) return;
     game.ropePos += (game.targetRopePos - game.ropePos) * 0.1;
     ctx.clearRect(0, 0, W, H);
     
     const cx = W / 2;
     const cy = H / 2;
-    const currentRopeCenterY = cy + game.ropePos;
+    const ropeY = cy + game.ropePos;
 
-    // Background Ground lines
-    ctx.strokeStyle = "rgba(255,255,255,0.05)";
+    // Background Grid
+    ctx.strokeStyle = "rgba(255,255,255,0.03)";
     ctx.lineWidth = 1;
-    for(let i=0; i<H; i+=40) {
+    for(let i=0; i<H; i+=50) {
         ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(W, i); ctx.stroke();
     }
 
     // Goal Lines
-    ctx.lineWidth = 2;
-    // Red Goal (Top)
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 8]);
     ctx.strokeStyle = "#ef4444";
-    ctx.setLineDash([5, 5]);
-    ctx.beginPath();
-    ctx.moveTo(cx - 120, cy - game.winLimit);
-    ctx.lineTo(cx + 120, cy - game.winLimit);
-    ctx.stroke();
-    
-    // Blue Goal (Bottom)
+    ctx.beginPath(); ctx.moveTo(cx - 150, cy - game.winLimit); ctx.lineTo(cx + 150, cy - game.winLimit); ctx.stroke();
     ctx.strokeStyle = "#3b82f6";
-    ctx.beginPath();
-    ctx.moveTo(cx - 120, cy + game.winLimit);
-    ctx.lineTo(cx + 120, cy + game.winLimit);
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - 150, cy + game.winLimit); ctx.lineTo(cx + 150, cy + game.winLimit); ctx.stroke();
     ctx.setLineDash([]);
 
-    // Vertical Rope
+    // Rope
     ctx.strokeStyle = "#8B4513";
     ctx.lineWidth = 10;
-    ctx.beginPath();
-    ctx.moveTo(cx, 0);
-    ctx.lineTo(cx, H);
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
 
-    // Center X marker
+    // Center X
     ctx.fillStyle = "#ff0000";
-    ctx.font = "bold 24px sans-serif";
+    ctx.font = "bold 28px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("X", cx, currentRopeCenterY + 8);
+    ctx.fillText("X", cx, ropeY + 10);
 
-    // Players
-    // Red Team Player (Left of rope, Above center)
-    drawPlayer(cx, currentRopeCenterY - 140, "#ef4444", true);
-    
-    // Blue Team Player (Right of rope, Below center)
-    drawPlayer(cx, currentRopeCenterY + 140 - 25, "#3b82f6", false);
+    // Draw Red Team (Above)
+    const redStart = ropeY - 100;
+    const spacing = 65;
+    for (let i = 0; i < game.redCount; i++) {
+        drawPlayer(cx, redStart - (i * spacing), "#ef4444", i);
+    }
 
-    game.raf = requestAnimationFrame(animate);
+    // Draw Blue Team (Below)
+    const blueStart = ropeY + 100 - 45;
+    for (let i = 0; i < game.blueCount; i++) {
+        drawPlayer(cx, blueStart + (i * spacing), "#3b82f6", i);
+    }
+
+    requestAnimationFrame(animate);
 }
 
-// Event Listeners
-document.getElementById('inp-red').addEventListener('keydown', e => { if (e.key === 'Enter') checkAns('red'); });
-document.getElementById('inp-blue').addEventListener('keydown', e => { if (e.key === 'Enter') checkAns('blue'); });
-document.getElementById('start-btn').addEventListener('click', startGame);
-document.getElementById('restart-btn').addEventListener('click', startGame);
+function endGame(winner) {
+    game.active = false;
+    const winOverlay = document.getElementById('win-overlay');
+    const winTitle = document.getElementById('win-title');
+    winOverlay.style.display = 'flex';
+    winTitle.textContent = winner + " Team Wins!";
+    winTitle.style.color = winner === 'Red' ? '#f87171' : '#60a5fa';
+}
 
-document.addEventListener('keydown', e => {
-    if (!game.active) return;
-    if (e.key === 'Shift') {
-        e.preventDefault();
-        if (document.activeElement === document.getElementById('inp-red')) {
-            document.getElementById('inp-blue').focus();
-        } else {
-            document.getElementById('inp-red').focus();
-        }
-    }
-});
-
+// Listeners
+document.getElementById('inp-red').onkeydown = e => { if(e.key === 'Enter') checkAns(); };
+document.getElementById('inp-blue').onkeydown = e => { if(e.key === 'Enter') checkAns(); };
 window.addEventListener('resize', resize);
 resize();
 </script>
 </body>
 </html>
-
