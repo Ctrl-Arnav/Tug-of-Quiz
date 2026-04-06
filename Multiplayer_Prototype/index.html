@@ -4,7 +4,7 @@
     <link rel="icon" href="https://fav.farm/🪢" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tug of Quiz - Horizontal Multiplayer</title>
+    <title>Tug Of Quiz - Multiplayer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
@@ -12,30 +12,38 @@
         body { font-family: sans-serif; background: #0a1628; overflow: hidden; }
         #root { display: flex; height: 100vh; width: 100vw; flex-direction: column; position: relative; }
         
-        /* Layout: Top UI, Center Game, Bottom UI */
         .panel {
-            position: absolute; width: 100%; height: 120px; 
+            position: absolute; width: 100%; height: 140px; 
             display: none; flex-direction: row; align-items: center; 
-            justify-content: center; padding: 0 40px; z-index: 10; gap: 20px;
-            background: rgba(10, 18, 40, 0.9);
+            justify-content: center; padding: 0 40px; z-index: 10; gap: 24px;
+            background: rgba(10, 18, 40, 0.92);
         }
-        #panel-red { top: 0; border-bottom: 2px solid rgba(239,68,68,0.3); }
-        #panel-blue { bottom: 0; border-top: 2px solid rgba(59,130,246,0.3); }
+        #panel-red { top: 0; border-bottom: 3px solid rgba(239,68,68,0.4); }
+        #panel-blue { bottom: 0; border-top: 3px solid rgba(59,130,246,0.4); }
 
         .ans-input {
             width: 300px; border: 2px solid rgba(255,255,255,0.1); border-radius: 12px;
-            padding: 12px; font-size: 18px; text-align: center; background: rgba(255,255,255,0.05);
-            color: #ffffff; outline: none;
+            padding: 14px; font-size: 20px; text-align: center; background: rgba(255,255,255,0.05);
+            color: #ffffff; outline: none; transition: all 0.2s;
         }
-        .ans-input.red:focus { border-color: #ef4444; }
-        .ans-input.blue:focus { border-color: #3b82f6; }
+        .ans-input.red:focus { border-color: #ef4444; box-shadow: 0 0 15px rgba(239,68,68,0.2); }
+        .ans-input.blue:focus { border-color: #3b82f6; box-shadow: 0 0 15px rgba(59,130,246,0.2); }
+
+        .feedback { height: 24px; font-size: 14px; font-weight: 700; text-align: center; margin-top: 6px; }
+        .feedback.correct { color: #4ade80; }
+        .feedback.wrong { color: #f87171; }
 
         #menu-overlay, #win-overlay {
             position: absolute; inset: 0; display: flex; flex-direction: column;
             align-items: center; justify-content: center; z-index: 40;
             background: rgba(10,18,40,0.98); color: white;
         }
-        .room-input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px; border-radius: 8px; margin-bottom: 16px; text-align: center; }
+        .room-input { 
+            background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.1); 
+            color: white; padding: 14px; border-radius: 10px; margin-bottom: 20px; 
+            text-align: center; font-size: 20px; outline: none; width: 260px;
+        }
+        .room-input:focus { border-color: #60a5fa; }
     </style>
 </head>
 <body>
@@ -44,46 +52,48 @@
     <canvas id="stage"></canvas>
 
     <div class="panel" id="panel-red">
-        <div class="bg-red-500/20 text-red-300 px-4 py-2 rounded-full font-bold text-xs uppercase">Team Red</div>
-        <div class="q-text text-white font-bold" id="q-red">---</div>
-        <input class="ans-input red" id="inp-red" type="text" placeholder="Answer..." autocomplete="off" />
-        <div class="feedback" id="fb-red"></div>
+        <div class="text-center">
+            <div class="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-[10px] uppercase font-black mb-1">Red Team</div>
+            <div class="q-text text-white font-bold text-xl" id="q-red">---</div>
+        </div>
+        <div>
+            <input class="ans-input red" id="inp-red" type="text" placeholder="Type answer..." autocomplete="off" />
+            <div class="feedback" id="fb-red"></div>
+        </div>
     </div>
 
     <div class="panel" id="panel-blue">
-        <div class="bg-blue-500/20 text-blue-300 px-4 py-2 rounded-full font-bold text-xs uppercase">Team Blue</div>
-        <div class="q-text text-white font-bold" id="q-blue">---</div>
-        <input class="ans-input blue" id="inp-blue" type="text" placeholder="Answer..." autocomplete="off" />
-        <div class="feedback" id="fb-blue"></div>
+        <div class="text-center">
+            <div class="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-[10px] uppercase font-black mb-1">Blue Team</div>
+            <div class="q-text text-white font-bold text-xl" id="q-blue">---</div>
+        </div>
+        <div>
+            <input class="ans-input blue" id="inp-blue" type="text" placeholder="Type answer..." autocomplete="off" />
+            <div class="feedback" id="fb-blue"></div>
+        </div>
     </div>
 
     <div id="menu-overlay">
-        <h1 class="text-4xl font-bold text-blue-400 mb-4">Horizontal Tug</h1>
-        <input type="text" id="room-id-input" class="room-input" placeholder="Room ID">
-        <button class="bg-blue-600 px-10 py-3 rounded-lg font-bold" id="join-btn">Join Match</button>
+        <h1 class="text-6xl font-black text-blue-500 mb-2 tracking-tighter">Tug Of Quiz</h1>
+        <p class="text-gray-500 mb-10 font-medium uppercase tracking-widest text-sm">Multiplayer Mode</p>
+        <input type="text" id="room-id-input" class="room-input" placeholder="ROOM ID">
+        <button class="bg-blue-600 px-12 py-4 rounded-2xl font-black text-lg hover:bg-blue-700 transition transform active:scale-95 shadow-xl" id="join-btn">JOIN ROOM</button>
     </div>
 
     <div id="win-overlay" style="display:none;">
-        <h2 class="text-5xl font-black mb-4" id="win-title"></h2>
-        <button class="bg-white text-black px-10 py-3 rounded-lg font-bold" onclick="location.reload()">Replay</button>
+        <h2 class="text-7xl font-black mb-6 italic underline" id="win-title"></h2>
+        <button class="bg-white text-black px-12 py-4 rounded-xl font-black hover:bg-gray-200 transition" onclick="location.reload()">PLAY AGAIN</button>
     </div>
 </div>
 
 <script>
 const socket = io("https://Aloharean-Tug-Of-Quiz.hf.space");
 
-// --- ASSET LOADING ---
-const imgAssets = {
-    redBody: "https://your-image-url-for-red-body.png",
-    blueBody: "https://your-image-url-for-blue-body.png",
-    head: "https://your-image-url-for-mustard-head.png",
-    hand: "https://your-image-url-for-mustard-hand.png"
-};
-const images = {};
-Object.keys(imgAssets).forEach(key => {
-    images[key] = new Image();
-    images[key].src = imgAssets[key];
-});
+const allQ = [
+    {q:"7 + 8",a:"15"},{q:"9 × 6",a:"54"},{q:"100 − 37",a:"63"},{q:"√25",a:"5"},
+    {q:"12 × 12",a:"144"},{q:"Capital of France?",a:"paris"},
+    {q:"Legs on a spider?",a:"8"},{q:"Months in a year?",a:"12"}
+];
 
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
@@ -91,43 +101,101 @@ let W, H;
 
 const game = {
     active: false,
-    ropeX: 0, // Now tracking X for horizontal
+    ropeX: 0,
     targetRopeX: 0,
-    winLimit: 250,
+    winLimit: 300,
+    roomId: null,
     myTeam: null,
     redCount: 0,
     blueCount: 0,
     currentQ: null
 };
 
-// ... (Socket logic join-room, init-player, room-update remain similar) ...
-// NOTE: Make sure your socket 'pull' logic on HF subtracts for Red (left) and adds for Blue (right)
+// Handle Join
+document.getElementById('join-btn').onclick = () => {
+    const id = document.getElementById('room-id-input').value.trim();
+    if (!id) return;
+    game.roomId = id;
+    socket.emit('join-room', id);
+};
 
-function drawPlayer(ropeY, x, color, index, team) {
-    const radius = 25;
-    const bodyHeight = 50;
-    
-    // Alternating vertically along the rope
+socket.on('init-player', (data) => {
+    game.myTeam = data.team;
+    game.targetRopeX = data.ropeX || 0;
+    game.ropeX = data.ropeX || 0;
+    document.getElementById('menu-overlay').style.display = 'none';
+    document.getElementById('panel-' + game.myTeam).style.display = 'flex';
+    game.active = true;
+    nextQ();
+    resize();
+    animate();
+});
+
+socket.on('room-update', (data) => {
+    game.redCount = data.redCount || 0;
+    game.blueCount = data.blueCount || 0;
+});
+
+socket.on('rope-moved', (newX) => {
+    game.targetRopeX = newX;
+    if (Math.abs(newX) >= game.winLimit) {
+        endGame(newX < 0 ? 'Red' : 'Blue');
+    }
+});
+
+function nextQ() {
+    game.currentQ = allQ[Math.floor(Math.random() * allQ.length)];
+    document.getElementById('q-' + game.myTeam).textContent = game.currentQ.q;
+    const inp = document.getElementById('inp-' + game.myTeam);
+    inp.value = "";
+    document.getElementById('fb-' + game.myTeam).textContent = "";
+    inp.focus();
+}
+
+function checkAns() {
+    const inp = document.getElementById('inp-' + game.myTeam);
+    const fb = document.getElementById('fb-' + game.myTeam);
+    if (inp.value.trim().toLowerCase() === game.currentQ.a.toLowerCase()) {
+        fb.textContent = "✓ CORRECT!"; fb.className = "feedback correct";
+        socket.emit('pull', { roomId: game.roomId, team: game.myTeam });
+        setTimeout(nextQ, 800);
+    } else {
+        fb.textContent = "✗ TRY AGAIN"; fb.className = "feedback wrong";
+        inp.value = "";
+    }
+}
+
+function resize() {
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W; canvas.height = H;
+}
+
+function drawPlayer(ropeY, x, teamColor, index) {
+    const radius = 25, bodyH = 50;
     const isAbove = index % 2 === 0;
-    const offset = radius + 5;
-    const playerY = isAbove ? ropeY - (offset + bodyHeight/2) : ropeY + offset;
+    // Position body relative to ropeY
+    const playerY = isAbove ? ropeY - (bodyH + 5) : ropeY + 5;
 
-    // 1. Draw Body
-    ctx.fillStyle = (team === 'red') ? "#ef4444" : "#3b82f6";
-    // If you use images: ctx.drawImage(images.redBody, x - radius, playerY, radius*2, bodyHeight);
+    // Body
+    ctx.fillStyle = teamColor;
     ctx.beginPath();
-    ctx.roundRect(x - radius, playerY, radius * 2, bodyHeight, [radius, radius, radius, radius]);
+    ctx.roundRect(x - radius, playerY, radius * 2, bodyH, [10, 10, 10, 10]);
     ctx.fill();
 
-    // 2. Draw Head (Mustard Upper Semicircle)
+    // Head (Mustard Upper Semicircle)
     ctx.fillStyle = "#E1AD01";
     ctx.beginPath();
-    ctx.arc(x, playerY, radius, Math.PI, 0);
+    // Head orientation flips if player is below rope
+    if (isAbove) {
+        ctx.arc(x, playerY, radius, Math.PI, 0);
+    } else {
+        ctx.arc(x, playerY + bodyH, radius, 0, Math.PI);
+    }
     ctx.fill();
 
-    // 3. Draw Hands (Mustard circles LOCKED to the rope center)
-    ctx.beginPath(); ctx.arc(x - 12, ropeY, 6, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + 12, ropeY, 6, 0, Math.PI * 2); ctx.fill();
+    // Hands (Mustard circles on rope)
+    ctx.beginPath(); ctx.arc(x - 10, ropeY, 6, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + 10, ropeY, 6, 0, Math.PI*2); ctx.fill();
 }
 
 function animate() {
@@ -135,40 +203,48 @@ function animate() {
     game.ropeX += (game.targetRopeX - game.ropeX) * 0.1;
     ctx.clearRect(0, 0, W, H);
     
-    const cx = W / 2;
-    const cy = H / 2;
-    const ropeX = cx + game.ropeX;
+    const cx = W / 2, cy = H / 2;
+    const rX = cx + game.ropeX;
 
-    // Horizontal Rope
-    ctx.strokeStyle = "#8B4513";
-    ctx.lineWidth = 10;
+    // Draw Grid
+    ctx.strokeStyle = "rgba(255,255,255,0.02)"; ctx.lineWidth = 1;
+    for(let i=0; i<W; i+=50) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,H); ctx.stroke(); }
+
+    // Win Boundaries
+    ctx.lineWidth = 4; ctx.setLineDash([10, 10]);
+    ctx.strokeStyle = "#ef4444"; ctx.beginPath(); ctx.moveTo(cx - game.winLimit, cy - 100); ctx.lineTo(cx - game.winLimit, cy + 100); ctx.stroke();
+    ctx.strokeStyle = "#3b82f6"; ctx.beginPath(); ctx.moveTo(cx + game.winLimit, cy - 100); ctx.lineTo(cx + game.winLimit, cy + 100); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Rope
+    ctx.strokeStyle = "#8B4513"; ctx.lineWidth = 12;
     ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
 
-    // Goal Lines (Vertical now)
-    ctx.strokeStyle = "#ef4444";
-    ctx.beginPath(); ctx.moveTo(cx - game.winLimit, cy - 100); ctx.lineTo(cx - game.winLimit, cy + 100); ctx.stroke();
-    ctx.strokeStyle = "#3b82f6";
-    ctx.beginPath(); ctx.moveTo(cx + game.winLimit, cy - 100); ctx.lineTo(cx + game.winLimit, cy + 100); ctx.stroke();
+    // Marker X
+    ctx.fillStyle = "red"; ctx.font = "black 40px Arial"; ctx.textAlign = "center";
+    ctx.fillText("X", rX, cy + 15);
 
-    // Center X
-    ctx.fillStyle = "red"; ctx.font = "bold 30px sans-serif";
-    ctx.fillText("X", ropeX, cy + 10);
-
-    // Draw Red Team (Left side of X)
-    const spacing = 70;
-    for (let i = 0; i < game.redCount; i++) {
-        drawPlayer(cy, ropeX - 120 - (i * spacing), "#ef4444", i, 'red');
-    }
-
-    // Draw Blue Team (Right side of X)
-    for (let i = 0; i < game.blueCount; i++) {
-        drawPlayer(cy, ropeX + 120 + (i * spacing), "#3b82f6", i, 'blue');
-    }
+    // Players
+    const spacing = 75;
+    for(let i=0; i<game.redCount; i++) drawPlayer(cy, rX - 100 - (i*spacing), "#ef4444", i);
+    for(let i=0; i<game.blueCount; i++) drawPlayer(cy, rX + 100 + (i*spacing), "#3b82f6", i);
 
     requestAnimationFrame(animate);
 }
 
-// ... (Resize and Input listeners) ...
+function endGame(winner) {
+    game.active = false;
+    document.getElementById('win-overlay').style.display = 'flex';
+    const wt = document.getElementById('win-title');
+    wt.textContent = winner.toUpperCase() + " WINS!";
+    wt.style.color = winner === 'Red' ? '#f87171' : '#60a5fa';
+}
+
+// Input Handlers
+document.getElementById('inp-red').onkeydown = e => { if(e.key==='Enter') checkAns(); };
+document.getElementById('inp-blue').onkeydown = e => { if(e.key==='Enter') checkAns(); };
+window.addEventListener('resize', resize);
+resize();
 </script>
 </body>
 </html>
