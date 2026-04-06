@@ -1,218 +1,250 @@
 <!DOCTYPE html>
-<html lang="en">
 <head>
     <link rel="icon" href="https://fav.farm/🪢" />
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tug Of Quiz - Multiplayer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: sans-serif; background: #0a1628; overflow: hidden; color: white; }
+        body { font-family: sans-serif; background: #0a1628; overflow: hidden; }
         #root { display: flex; height: 100vh; width: 100vw; flex-direction: column; position: relative; }
-        
+
+
         .panel {
-            position: absolute; width: 100%; height: 130px; 
+            position: absolute; width: 100%; height: 140px; 
             display: none; flex-direction: row; align-items: center; 
-            justify-content: center; padding: 0 40px; z-index: 10; gap: 20px;
-            background: rgba(10, 18, 40, 0.9);
+            justify-content: center; padding: 0 40px; z-index: 10; gap: 24px;
+            background: rgba(10, 18, 40, 0.92);
         }
-        #panel-red { top: 0; border-bottom: 2px solid rgba(239,68,68,0.3); }
-        #panel-blue { bottom: 0; border-top: 2px solid rgba(59,130,246,0.3); }
+        #panel-red { top: 0; border-bottom: 3px solid rgba(239,68,68,0.4); }
+        #panel-blue { bottom: 0; border-top: 3px solid rgba(59,130,246,0.4); }
 
         .ans-input {
-            width: 280px; border: 2px solid rgba(255,255,255,0.1); border-radius: 12px;
-            padding: 12px; font-size: 18px; text-align: center; background: rgba(255,255,255,0.05);
-            color: white; outline: none; transition: all 0.2s;
+            width: 300px; border: 2px solid rgba(255,255,255,0.1); border-radius: 12px;
+            padding: 14px; font-size: 20px; text-align: center; background: rgba(255,255,255,0.05);
+            color: #ffffff; outline: none; transition: all 0.2s;
         }
-        .ans-input:focus { border-color: #6366f1; }
+        .ans-input.red:focus { border-color: #ef4444; box-shadow: 0 0 15px rgba(239,68,68,0.2); }
+        .ans-input.blue:focus { border-color: #3b82f6; box-shadow: 0 0 15px rgba(59,130,246,0.2); }
 
-        #menu-overlay {
+        .feedback { height: 24px; font-size: 14px; font-weight: 700; text-align: center; margin-top: 6px; }
+        .feedback.correct { color: #4ade80; }
+        .feedback.wrong { color: #f87171; }
+
+
+        #menu-overlay, #win-overlay {
             position: absolute; inset: 0; display: flex; flex-direction: column;
             align-items: center; justify-content: center; z-index: 40;
-            background: rgba(10,18,40,0.98);
+            background: rgba(10,18,40,0.98); color: white;
         }
-
-        .avatar-option {
-            border: 3px solid transparent; cursor: pointer; border-radius: 12px;
-            transition: all 0.2s; padding: 10px; background: rgba(255,255,255,0.05);
-            text-align: center;
+        .room-input { 
+            background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.1); 
+            color: white; padding: 14px; border-radius: 10px; margin-bottom: 20px; 
+            text-align: center; font-size: 20px; outline: none; width: 260px;
         }
-        .avatar-option.selected { border-color: #6366f1; background: rgba(99, 102, 241, 0.2); }
-        .avatar-option img { width: 100px; height: 100px; object-fit: contain; }
+        .room-input:focus { border-color: #60a5fa; }
 
-        canvas { cursor: default; }
     </style>
 </head>
 <body>
-
-<div id="root">
+@@ -52,66 +53,75 @@
     <canvas id="stage"></canvas>
 
     <div class="panel" id="panel-red">
-        <div class="text-center mr-4"><div class="q-text font-bold text-lg" id="q-red">---</div></div>
-        <input class="ans-input" id="inp-red" type="text" placeholder="Answer..." autocomplete="off" />
+        <div class="text-center">
+            <div class="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-[10px] uppercase font-black mb-1">Red Team</div>
+            <div class="q-text text-white font-bold text-xl" id="q-red">---</div>
+        </div>
+        <div>
+            <input class="ans-input red" id="inp-red" type="text" placeholder="Type answer..." autocomplete="off" />
+            <div class="feedback" id="fb-red"></div>
+        </div>
     </div>
 
     <div class="panel" id="panel-blue">
-        <div class="text-center mr-4"><div class="q-text font-bold text-lg" id="q-blue">---</div></div>
-        <input class="ans-input" id="inp-blue" type="text" placeholder="Answer..." autocomplete="off" />
+        <div class="text-center">
+            <div class="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-[10px] uppercase font-black mb-1">Blue Team</div>
+            <div class="q-text text-white font-bold text-xl" id="q-blue">---</div>
+        </div>
+        <div>
+            <input class="ans-input blue" id="inp-blue" type="text" placeholder="Type answer..." autocomplete="off" />
+            <div class="feedback" id="fb-blue"></div>
+        </div>
     </div>
 
     <div id="menu-overlay">
-        <h1 class="text-5xl font-black text-blue-400 mb-6 italic uppercase">Tug Of Quiz</h1>
-        
-        <p class="text-gray-400 mb-4 uppercase tracking-widest text-xs">Choose Appearance</p>
-        <div class="flex gap-6 mb-8">
-            <div class="avatar-option selected" id="opt-m" onclick="selectGender('m')">
-                <img src="https://i.ibb.co/BV25PGnr/Player-M-Red.webp" alt="Male">
-                <p class="text-xs mt-2 font-bold">MALE</p>
-            </div>
-            <div class="avatar-option" id="opt-f" onclick="selectGender('f')">
-                <img src="https://i.ibb.co/hxyvfnmP/Player-F-Red.webp" alt="Female">
-                <p class="text-xs mt-2 font-bold">FEMALE</p>
-            </div>
-        </div>
+        <h1 class="text-6xl font-black text-blue-500 mb-2 tracking-tighter">Tug Of Quiz</h1>
+        <p class="text-gray-500 mb-10 font-medium uppercase tracking-widest text-sm">Multiplayer Mode</p>
+        <input type="text" id="room-id-input" class="room-input" placeholder="ROOM ID">
+        <button class="bg-blue-600 px-12 py-4 rounded-2xl font-black text-lg hover:bg-blue-700 transition transform active:scale-95 shadow-xl" id="join-btn">JOIN ROOM</button>
 
-        <input type="text" id="room-id-input" class="bg-gray-800 border border-gray-700 p-4 rounded-lg text-center mb-4 w-64 text-xl" placeholder="Room ID">
-        <button class="bg-blue-600 px-12 py-4 rounded-xl font-bold uppercase tracking-wider hover:bg-blue-700" id="join-btn">Start Game</button>
     </div>
 
-    <div id="win-overlay" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.9); z-index:50; flex-direction:column; align-items:center; justify-content:center;">
-        <h2 class="text-7xl font-black mb-8 italic" id="win-title"></h2>
-        <button class="bg-white text-black px-12 py-4 rounded-full font-bold text-xl" onclick="location.reload()">REPLAY</button>
+    <div id="win-overlay" style="display:none;">
+        <h2 class="text-7xl font-black mb-6 italic underline" id="win-title"></h2>
+        <button class="bg-white text-black px-12 py-4 rounded-xl font-black hover:bg-gray-200 transition" onclick="location.reload()">PLAY AGAIN</button>
     </div>
 </div>
 
 <script>
-// --- CONFIG & SOCKET ---
+
 const socket = io("https://Aloharean-Tug-Of-Quiz.hf.space");
+
+
+const allQ = [
+    {q:"7 + 8",a:"15"},{q:"9 × 6",a:"54"},{q:"100 − 37",a:"63"},{q:"√25",a:"5"},
+    {q:"12 × 12",a:"144"},{q:"Capital of France?",a:"paris"},
+    {q:"Legs on a spider?",a:"8"},{q:"Months in a year?",a:"12"}
+];
+
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
 let W, H;
 
-const game = { 
-    active: false, ropeX: 0, targetRopeX: 0, winLimit: 250, 
-    roomId: null, myTeam: null, redPlayers: [], bluePlayers: [] 
+const game = {
+    active: false,
+    ropeX: 0,
+    targetRopeX: 0,
+    winLimit: 300,
+    roomId: null,
+    myTeam: null,
+    redCount: 0,
+    blueCount: 0,
+    currentQ: null
 };
 
-const allQ = [{q:"7 + 8",a:"15"},{q:"9 × 6",a:"54"},{q:"100 - 37",a:"63"},{q:"12 × 12",a:"144"},{q:"Capital of France?",a:"paris"}];
+// Handle Join
 
-// --- ASSET LOADING ---
-const images = {};
-const assetURLs = {
-    'm_red': 'https://i.ibb.co/BV25PGnr/Player-M-Red.webp',
-    'f_red': 'https://i.ibb.co/hxyvfnmP/Player-F-Red.webp',
-    'm_blue': 'https://i.ibb.co/sXwVPtR/Player-M-Blue.webp',
-    'f_blue': 'https://i.ibb.co/hxyvfnmP/Player-F-Blue.webp',
-    'rope': 'https://i.ibb.co/wNYsQ9cK/ropefinal.png'
-};
 
-for (let key in assetURLs) {
-    images[key] = new Image();
-    images[key].src = assetURLs[key];
-}
 
-// --- SELECTION LOGIC ---
-let selectedGender = 'm';
-function selectGender(g) {
-    selectedGender = g;
-    document.getElementById('opt-m').classList.toggle('selected', g === 'm');
-    document.getElementById('opt-f').classList.toggle('selected', g === 'f');
-}
+
+
 
 document.getElementById('join-btn').onclick = () => {
     const id = document.getElementById('room-id-input').value.trim();
     if (!id) return;
-    game.roomId = id;
-    socket.emit('join-room', { roomId: id, gender: selectedGender });
-};
-
-// --- SOCKET EVENTS ---
-socket.on('init-player', (data) => {
-    game.myTeam = data.team;
-    game.targetRopeX = data.ropeX || 0;
-    game.ropeX = data.ropeX || 0;
+@@ -126,28 +136,26 @@ <h2 class="text-7xl font-black mb-6 italic underline" id="win-title"></h2>
     document.getElementById('menu-overlay').style.display = 'none';
     document.getElementById('panel-' + game.myTeam).style.display = 'flex';
     game.active = true;
-    nextQ(); animate();
+    nextQ();
+    resize();
+    animate();
 });
 
 socket.on('room-update', (data) => {
-    game.redPlayers = data.redPlayers;
-    game.bluePlayers = data.bluePlayers;
+    game.redCount = data.redCount || 0;
+    game.blueCount = data.blueCount || 0;
 });
 
 socket.on('rope-moved', (newX) => {
     game.targetRopeX = newX;
-    if (Math.abs(newX) >= game.winLimit) endGame(newX < 0 ? 'Red' : 'Blue');
+    if (Math.abs(newX) >= game.winLimit) {
+        endGame(newX < 0 ? 'Red' : 'Blue');
+    }
 });
 
-// --- CORE GAMEPLAY ---
+
 function nextQ() {
     game.currentQ = allQ[Math.floor(Math.random() * allQ.length)];
     document.getElementById('q-' + game.myTeam).textContent = game.currentQ.q;
     const inp = document.getElementById('inp-' + game.myTeam);
-    inp.value = ""; inp.focus();
+    inp.value = "";
+    document.getElementById('fb-' + game.myTeam).textContent = "";
+    inp.focus();
 }
-
-function checkAns() {
-    const inp = document.getElementById('inp-' + game.myTeam);
-    if (inp.value.trim().toLowerCase() === game.currentQ.a.toLowerCase()) {
+@@ -159,92 +167,102 @@ <h2 class="text-7xl font-black mb-6 italic underline" id="win-title"></h2>
+        fb.textContent = "✓ CORRECT!"; fb.className = "feedback correct";
         socket.emit('pull', { roomId: game.roomId, team: game.myTeam });
-        nextQ();
-    } else { inp.value = ""; }
+        setTimeout(nextQ, 800);
+    } else {
+        fb.textContent = "✗ TRY AGAIN"; fb.className = "feedback wrong";
+        inp.value = "";
+    }
 }
 
-// --- RENDER LOGIC ---
-function resize() { W = window.innerWidth; H = window.innerHeight; canvas.width = W; canvas.height = H; }
-window.onresize = resize; resize();
+function resize() {
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W; canvas.height = H;
 
-function drawPlayer(cy, x, team, gender) {
-    const pWidth = W / 11;
-    const pHeight = pWidth; // 1:1 ratio
-    const y = cy - (pHeight / 2);
-    const imgKey = `${gender}_${team}`;
-    if (images[imgKey] && images[imgKey].complete) {
-        ctx.drawImage(images[imgKey], x - pWidth/2, y, pWidth, pHeight);
+
+
+
+
+
+
+}
+
+
+
+function drawPlayer(ropeY, x, teamColor, index) {
+    const radius = 25, bodyH = 50;
+    const isAbove = index % 2 === 0;
+    // Position body relative to ropeY
+    const playerY = isAbove ? ropeY - (bodyH + 5) : ropeY + 5;
+
+    // Body
+    ctx.fillStyle = teamColor;
+    ctx.beginPath();
+    ctx.roundRect(x - radius, playerY, radius * 2, bodyH, [10, 10, 10, 10]);
+    ctx.fill();
+
+    // Head (Mustard Upper Semicircle)
+    ctx.fillStyle = "#E1AD01";
+    ctx.beginPath();
+    // Head orientation flips if player is below rope
+    if (isAbove) {
+        ctx.arc(x, playerY, radius, Math.PI, 0);
+    } else {
+        ctx.arc(x, playerY + bodyH, radius, 0, Math.PI);
     }
+    ctx.fill();
+
+    // Hands (Mustard circles on rope)
+    ctx.beginPath(); ctx.arc(x - 10, ropeY, 6, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + 10, ropeY, 6, 0, Math.PI*2); ctx.fill();
+
+
 }
 
 function animate() {
     if (!game.active) return;
+
+
     game.ropeX += (game.targetRopeX - game.ropeX) * 0.1;
     ctx.clearRect(0, 0, W, H);
-    
-    const cx = W/2, cy = H/2, rx = cx + game.ropeX;
-    const spacing = W / 12;
 
-    // 1. LAYER: PLAYERS (STAND BEHIND ROPE)
-    game.redPlayers.forEach((p, i) => drawPlayer(cy, rx - 150 - (i * spacing), 'red', p.gender));
-    game.bluePlayers.forEach((p, i) => drawPlayer(cy, rx + 150 + (i * spacing), 'blue', p.gender));
+    const cx = W / 2, cy = H / 2;
+    const rX = cx + game.ropeX;
 
-    // 2. LAYER: THE ROPE
-    if (images.rope.complete) {
-        const ropeH = (W / 1024) * 128;
-        ctx.drawImage(images.rope, 0, cy - ropeH/2, W, ropeH);
-    }
+    // Draw Grid
+    ctx.strokeStyle = "rgba(255,255,255,0.02)"; ctx.lineWidth = 1;
+    for(let i=0; i<W; i+=50) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,H); ctx.stroke(); }
 
-    // 3. LAYER: THE HANDS (GRIP ON TOP OF ROPE)
-    ctx.fillStyle = "#c18d4c";
-    game.redPlayers.forEach((p, i) => {
-        const x = rx - 150 - (i * spacing);
-        ctx.beginPath(); ctx.arc(x - 15, cy, 7, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + 15, cy, 7, 0, Math.PI*2); ctx.fill();
-    });
-    game.bluePlayers.forEach((p, i) => {
-        const x = rx + 150 + (i * spacing);
-        ctx.beginPath(); ctx.arc(x - 15, cy, 7, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + 15, cy, 7, 0, Math.PI*2); ctx.fill();
-    });
+    // Win Boundaries
+    ctx.lineWidth = 4; ctx.setLineDash([10, 10]);
+    ctx.strokeStyle = "#ef4444"; ctx.beginPath(); ctx.moveTo(cx - game.winLimit, cy - 100); ctx.lineTo(cx - game.winLimit, cy + 100); ctx.stroke();
+    ctx.strokeStyle = "#3b82f6"; ctx.beginPath(); ctx.moveTo(cx + game.winLimit, cy - 100); ctx.lineTo(cx + game.winLimit, cy + 100); ctx.stroke();
+    ctx.setLineDash([]);
 
-    // 4. LAYER: CENTER MARKER
-    ctx.fillStyle = "red"; ctx.font = "bold 40px Arial"; ctx.textAlign = "center";
-    ctx.fillText("X", rx, cy + 15);
+    // Rope
+    ctx.strokeStyle = "#8B4513"; ctx.lineWidth = 12;
+    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+
+    // Marker X
+    ctx.fillStyle = "red"; ctx.font = "black 40px Arial"; ctx.textAlign = "center";
+    ctx.fillText("X", rX, cy + 15);
+
+    // Players
+    const spacing = 75;
+    for(let i=0; i<game.redCount; i++) drawPlayer(cy, rX - 100 - (i*spacing), "#ef4444", i);
+    for(let i=0; i<game.blueCount; i++) drawPlayer(cy, rX + 100 + (i*spacing), "#3b82f6", i);
+
+
+
+
 
     requestAnimationFrame(animate);
 }
@@ -222,11 +254,14 @@ function endGame(winner) {
     document.getElementById('win-overlay').style.display = 'flex';
     const wt = document.getElementById('win-title');
     wt.textContent = winner.toUpperCase() + " WINS!";
-    wt.style.color = winner === 'Red' ? '#ef4444' : '#3b82f6';
+    wt.style.color = winner === 'Red' ? '#f87171' : '#60a5fa';
 }
 
-document.getElementById('inp-red').onkeydown = e => { if(e.key === 'Enter') checkAns(); };
-document.getElementById('inp-blue').onkeydown = e => { if(e.key === 'Enter') checkAns(); };
+// Input Handlers
+document.getElementById('inp-red').onkeydown = e => { if(e.key==='Enter') checkAns(); };
+document.getElementById('inp-blue').onkeydown = e => { if(e.key==='Enter') checkAns(); };
+window.addEventListener('resize', resize);
+resize();
 </script>
 </body>
 </html>
