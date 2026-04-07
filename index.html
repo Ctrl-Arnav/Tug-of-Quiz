@@ -4,133 +4,106 @@
     <meta charset="UTF-8">
     <link rel="icon" href="https://fav.farm/🪢" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tug of Quiz - Hub</title>
+    <title>Tug Of Quiz - Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #0a1628; color: white; font-family: 'Inter', sans-serif; }
-        .glass-panel { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); }
+        body { background: #050b14; color: white; font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); }
     </style>
 </head>
 <body class="min-h-screen p-8 flex flex-col items-center">
     
     <header class="text-center mb-12">
-        <h1 class="text-6xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-red-500 uppercase tracking-tighter">
-            Tug Of Quiz
-        </h1>
-        <p class="text-gray-400 mt-2 font-medium tracking-widest uppercase text-xs">Team Management & Leaderboard</p>
+        <h1 class="text-6xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-red-500 uppercase tracking-tighter">TUG OF QUIZ</h1>
+        <p class="text-gray-500 mt-2 font-bold tracking-widest uppercase text-xs">Registry & Global Leaderboard</p>
     </header>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full max-w-7xl">
-        
-        <div class="glass-panel p-8 rounded-2xl flex flex-col">
-            <h2 class="text-2xl font-bold mb-6 text-blue-400">01. Create Team</h2>
+        <div class="glass p-8 rounded-3xl flex flex-col">
+            <h2 class="text-2xl font-black mb-6 text-blue-400">01. REGISTER TEAM</h2>
             <div class="space-y-4">
                 <input type="text" id="new-team-name" placeholder="Enter Team Name..." 
                     class="w-full bg-gray-900 border border-gray-700 p-4 rounded-xl outline-none focus:border-blue-500 transition">
                 <button onclick="generateTeamID()" 
-                    class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-bold uppercase transition">
-                    Get Unique ID
-                </button>
+                    class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-black uppercase transition shadow-lg">Get Unique ID</button>
             </div>
-
-            <div id="id-result" class="mt-8 p-6 bg-blue-500/10 border border-blue-500/30 rounded-xl hidden text-center">
-                <p class="text-xs text-blue-300 uppercase font-bold">Share this ID:</p>
+            <div id="id-result" class="mt-8 p-6 bg-blue-500/10 border border-blue-500/30 rounded-2xl hidden text-center">
+                <p class="text-xs text-blue-300 uppercase font-black">Your Team ID:</p>
                 <h3 id="display-id" class="text-5xl font-black my-2 tracking-widest text-white">----</h3>
+                <p class="text-[10px] text-gray-500 uppercase">Save this to join matches!</p>
             </div>
         </div>
 
-        <div class="lg:col-span-2 glass-panel p-8 rounded-2xl">
-            <h2 class="text-2xl font-bold mb-6 text-red-400">02. Rankings</h2>
+        <div class="lg:col-span-2 glass p-8 rounded-3xl">
+            <h2 class="text-2xl font-black mb-6 text-red-400">02. RANKINGS</h2>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
                     <thead>
                         <tr class="text-gray-500 uppercase text-[10px] border-b border-gray-800">
                             <th class="pb-4">Team</th>
-                            <th class="pb-4">Wins</th>
+                            <th class="pb-4">Matches Won</th>
                             <th class="pb-4">In-Round Time</th>
                             <th class="pb-4 text-blue-400">Avg Time / Match</th>
                         </tr>
                     </thead>
-                    <tbody id="leaderboard-body">
-                        </tbody>
+                    <tbody id="leaderboard-body"></tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <div class="mt-12 flex flex-col items-center gap-4">
+    <div class="mt-12 flex flex-col items-center gap-6">
         <div class="flex gap-4">
             <button onclick="validateAndGo('./Multiplayer_Prototype/index.html')" 
-                class="px-10 py-4 bg-white text-black font-black rounded-full hover:scale-105 transition shadow-xl">
-                ENTER MATCH ARENA
-            </button>
-            <a href="./Concept_Demo/index.html" class="px-10 py-4 border border-gray-700 font-bold rounded-full hover:bg-white/5 transition">
-                LOCAL DEMO
-            </a>
+                class="px-12 py-5 bg-white text-black font-black rounded-full hover:scale-105 transition shadow-2xl uppercase italic">Enter Match Arena</button>
+            <a href="./Concept_Demo/index.html" class="px-12 py-5 border border-gray-700 font-bold rounded-full hover:bg-white/5 transition uppercase text-sm">Local Demo</a>
         </div>
-        <p id="validation-msg" class="text-red-400 text-sm font-bold opacity-0 transition-opacity">Please create/enter a valid Team ID first!</p>
     </div>
 
     <script>
-        // Temporary Local Registry (Should be Server-Side eventually)
-        const teamRegistry = JSON.parse(localStorage.getItem('tugTeams')) || {
-            "B3EF": { name: "Pixel Gladiators", matches: 5, totalTime: 420 },
-            "K9Z2": { name: "Query Kings", matches: 3, totalTime: 310 }
-        };
-
-        let sessionTeamID = null;
+        const teamRegistry = JSON.parse(localStorage.getItem('tugTeams')) || {};
 
         function generateTeamID() {
-            const nameInput = document.getElementById('new-team-name');
-            const name = nameInput.value.trim();
-            if (!name) return alert("Please enter a name!");
+            const name = document.getElementById('new-team-name').value.trim();
+            if (!name) return alert("Enter a name!");
 
-            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-            let id = "";
-            for (let i = 0; i < 4; i++) id += chars.charAt(Math.floor(Math.random() * chars.length));
-
+            const id = Math.random().toString(36).substring(2, 6).toUpperCase();
             teamRegistry[id] = { name: name, matches: 0, totalTime: 0 };
-            localStorage.setItem('tugTeams', JSON.stringify(teamRegistry));
             
-            sessionTeamID = id;
+            localStorage.setItem('tugTeams', JSON.stringify(teamRegistry));
+            localStorage.setItem('currentTeamID', id);
+            localStorage.setItem('currentTeamName', name);
+
             document.getElementById('display-id').innerText = id;
             document.getElementById('id-result').classList.remove('hidden');
             updateLeaderboard();
         }
 
         function validateAndGo(url) {
-            const checkID = sessionTeamID || prompt("Enter your Team ID:");
+            const checkID = localStorage.getItem('currentTeamID') || prompt("Enter Team ID:").toUpperCase();
             if (teamRegistry[checkID]) {
-                // Pass the Team Name and ID to the next page via URL params or LocalStorage
                 localStorage.setItem('currentTeamID', checkID);
                 localStorage.setItem('currentTeamName', teamRegistry[checkID].name);
                 window.location.href = url;
             } else {
-                const msg = document.getElementById('validation-msg');
-                msg.style.opacity = 1;
-                setTimeout(() => msg.style.opacity = 0, 3000);
+                alert("Invalid Team ID! Please register in the Hub first.");
             }
         }
 
         function updateLeaderboard() {
             const tbody = document.getElementById('leaderboard-body');
             tbody.innerHTML = "";
-            
             Object.entries(teamRegistry).forEach(([id, data]) => {
-                // MATH: Total In-Round Time / Matches Played
                 const avg = data.matches > 0 ? (data.totalTime / data.matches).toFixed(1) : "0.0";
-                
                 tbody.innerHTML += `
                     <tr class="border-b border-gray-800/50 hover:bg-white/5 transition">
                         <td class="py-4"><span class="font-bold">${data.name}</span><br><span class="text-[10px] text-gray-500">ID: ${id}</span></td>
                         <td class="py-4">${data.matches}</td>
                         <td class="py-4">${data.totalTime}s</td>
                         <td class="py-4 font-bold text-blue-400">${avg}s</td>
-                    </tr>
-                `;
+                    </tr>`;
             });
         }
-
         updateLeaderboard();
     </script>
 </body>
