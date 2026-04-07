@@ -29,7 +29,7 @@
         .ans-input.red:focus { border-color: #ef4444; background: rgba(239,68,68,0.05); }
         .ans-input.blue:focus { border-color: #3b82f6; background: rgba(59,130,246,0.05); }
 
-        #menu-overlay, #ready-screen, #win-overlay {
+        #room-overlay, #team-overlay, #ready-screen, #win-overlay {
             position: absolute; inset: 0; display: flex; flex-direction: column;
             align-items: center; justify-content: center; z-index: 40;
             background: rgba(10,18,40,0.98);
@@ -62,14 +62,23 @@
         <input class="ans-input blue" id="inp-blue" type="text" placeholder="Answer..." autocomplete="off" />
     </div>
 
-    <div id="menu-overlay">
-        <h1 class="text-5xl font-black text-blue-400 mb-2 italic uppercase">ARENA ENTRY</h1>
-        <p class="text-gray-400 mb-8 uppercase text-xs tracking-widest">Verify Room & Team ID</p>
+    <div id="room-overlay">
+        <h1 class="text-5xl font-black text-blue-400 mb-2 italic uppercase">ARENA</h1>
+        <p class="text-gray-400 mb-8 uppercase text-xs tracking-widest">Step 1: Join a Room</p>
         <input type="text" id="room-input" class="std-input" placeholder="Enter Room ID">
-        <input type="text" id="team-id-input" class="std-input" placeholder="Enter Team ID">
-        <button class="bg-blue-600 px-12 py-4 rounded-xl font-bold uppercase hover:bg-blue-700 transition text-white" onclick="join()">
-            Join Match
+        <button class="bg-blue-600 px-12 py-4 rounded-xl font-bold uppercase hover:bg-blue-700 transition" onclick="nextStep()">
+            Continue
         </button>
+    </div>
+
+    <div id="team-overlay" style="display:none;">
+        <h1 class="text-3xl font-black text-white mb-2 italic uppercase">SELECT TEAM</h1>
+        <p class="text-gray-400 mb-8 uppercase text-xs tracking-widest">Step 2: Enter Team ID from Hub</p>
+        <input type="text" id="team-id-input" class="std-input" placeholder="Unique Team ID">
+        <button class="bg-white text-black px-12 py-4 rounded-xl font-bold uppercase hover:bg-gray-200 transition" onclick="joinTeam()">
+            Join Team
+        </button>
+        <p id="error-msg" class="mt-4 text-red-500 font-bold text-sm"></p>
     </div>
 
     <div id="ready-screen" style="display:none;">
@@ -77,7 +86,7 @@
         <button id="ready-btn" onclick="sendReady()" class="bg-green-600 px-16 py-6 rounded-full text-4xl font-black hover:bg-green-500 transition">
             READY
         </button>
-        <p id="ready-status" class="mt-4 text-gray-500 uppercase text-xs">Waiting for both teams...</p>
+        <p id="ready-status" class="mt-4 text-gray-500 uppercase text-xs">Waiting for opponents...</p>
     </div>
 
     <div id="win-overlay" style="display:none;">
@@ -92,41 +101,33 @@
     const ctx = canvas.getContext('2d');
     let W, H, mySide;
 
-    const game = { 
-        active: false, 
-        ropeX: 0, 
-        targetRopeX: 0, 
-        winLimit: 250, 
-        room: null, 
-        redCount: 0, 
-        blueCount: 0, 
-        currentQ: null 
-    };
+    const game = { active: false, ropeX: 0, targetRopeX: 0, winLimit: 250, room: null, redCount: 0, blueCount: 0, currentQ: null };
 
-    // Initialize Auto-fill from Hub
-    window.onload = () => {
-        const savedID = localStorage.getItem('currentTeamID');
-        if(savedID) document.getElementById('team-id-input').value = savedID;
-        resize();
-    };
+    // STEP 1 Logic
+    function nextStep() {
+        const r = document.getElementById('room-input').value.trim();
+        if(!r) return;
+        game.room = r;
+        document.getElementById('room-overlay').style.display = 'none';
+        document.getElementById('team-overlay').style.display = 'flex';
+    }
 
-    function join() {
-        const room = document.getElementById('room-input').value.trim();
-        const teamID = document.getElementById('team-id-input').value.trim().toUpperCase();
-        if(!room || !teamID) return alert("Please fill in both IDs!");
-        
-        game.room = room;
-        socket.emit("join-room", { room, teamID });
+    // STEP 2 Logic
+    function joinTeam() {
+        const tid = document.getElementById('team-id-input').value.trim().toUpperCase();
+        if(!tid) return;
+        socket.emit("join-attempt", { room: game.room, teamID: tid });
     }
 
     socket.on("join-response", (res) => {
-        if(!res.success) return alert(res.message);
-        
+        if(!res.success) {
+            document.getElementById('error-msg').innerText = res.message;
+            return;
+        }
         mySide = res.side;
         document.getElementById('name-red').innerText = res.redName;
         document.getElementById('name-blue').innerText = res.blueName;
-        
-        document.getElementById('menu-overlay').style.display = 'none';
+        document.getElementById('team-overlay').style.display = 'none';
         document.getElementById('ready-screen').style.display = 'flex';
     });
 
@@ -147,8 +148,8 @@
         document.getElementById('ready-screen').style.display = 'none';
         document.getElementById('panel-' + mySide).style.display = 'flex';
         game.active = true;
-        if(data.question) updateQuestion(data.question);
-        animate();
+        updateQuestion(data.question);
+        resize(); animate();
     });
 
     socket.on("rope-moved", (data) => {
@@ -159,16 +160,8 @@
         game.active = false;
         const winTitle = document.getElementById('win-title');
         document.getElementById('win-overlay').style.display = 'flex';
-        winTitle.innerText = data.winner.toUpperCase() + " WINS ROUND!";
+        winTitle.innerText = data.winner.toUpperCase() + " WINS!";
         winTitle.style.color = data.winner === 'red' ? '#ef4444' : '#3b82f6';
-
-        if(!data.isMatchOver) {
-            setTimeout(() => {
-                document.getElementById('win-overlay').style.display = 'none';
-                game.ropeX = 0;
-                game.targetRopeX = 0;
-            }, 3000);
-        }
     });
 
     function updateQuestion(qObj) {
@@ -182,16 +175,13 @@
         const inp = document.getElementById('inp-' + mySide);
         if (inp.value.trim().toLowerCase() === game.currentQ.a.toLowerCase()) {
             socket.emit('pull', { room: game.room, team: mySide });
-            // New question will come from server via start-next-round/update-q
         } else {
             inp.value = "";
         }
     }
 
-    function resize() { 
-        W = window.innerWidth; H = window.innerHeight; 
-        canvas.width = W; canvas.height = H; 
-    }
+    // --- STABLE RENDER ENGINE ---
+    function resize() { W = window.innerWidth; H = window.innerHeight; canvas.width = W; canvas.height = H; }
     window.onresize = resize;
 
     function drawPlayer(cy, x, color, index) {
@@ -208,7 +198,6 @@
         if (!game.active) return;
         game.ropeX += (game.targetRopeX - game.ropeX) * 0.1;
         ctx.clearRect(0, 0, W, H);
-        
         const cx = W/2, cy = H/2, rx = cx + game.ropeX;
 
         // Grid
