@@ -1,17 +1,17 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <link rel="icon" href="https://fav.farm/🪢" />
     <meta charset="UTF-8">
-@@ -8,260 +9,190 @@
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tug Of Quiz - Multiplayer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: sans-serif; background: #0a1628; overflow: hidden; color: white; }
         #root { display: flex; height: 100vh; width: 100vw; flex-direction: column; position: relative; }
         
-
         .panel {
             position: absolute; width: 100%; height: 130px; 
             display: none; flex-direction: row; align-items: center; 
@@ -26,13 +26,8 @@
             padding: 12px; font-size: 18px; text-align: center; background: rgba(255,255,255,0.05);
             color: white; outline: none; transition: all 0.2s;
         }
-        .ans-input.red:focus { border-color: #ef4444; }
-        .ans-input.blue:focus { border-color: #3b82f6; }
-
-
-
-
-
+        .ans-input.red:focus { border-color: #ef4444; background: rgba(239,68,68,0.05); }
+        .ans-input.blue:focus { border-color: #3b82f6; background: rgba(59,130,246,0.05); }
 
         #menu-overlay, #win-overlay {
             position: absolute; inset: 0; display: flex; flex-direction: column;
@@ -44,8 +39,6 @@
             padding: 12px; border-radius: 8px; margin-bottom: 16px; text-align: center; 
             font-size: 18px; color: white; outline: none;
         }
-
-
     </style>
 </head>
 <body>
@@ -57,10 +50,6 @@
         <div class="text-center mr-4">
             <div class="bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-[10px] uppercase font-bold mb-1">Red Team</div>
             <div class="q-text font-bold text-lg" id="q-red">---</div>
-
-
-
-
         </div>
         <input class="ans-input red" id="inp-red" type="text" placeholder="Answer..." autocomplete="off" />
     </div>
@@ -69,10 +58,6 @@
         <div class="text-center mr-4">
             <div class="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-[10px] uppercase font-bold mb-1">Blue Team</div>
             <div class="q-text font-bold text-lg" id="q-blue">---</div>
-
-
-
-
         </div>
         <input class="ans-input blue" id="inp-blue" type="text" placeholder="Answer..." autocomplete="off" />
     </div>
@@ -81,27 +66,19 @@
         <h1 class="text-5xl font-black text-blue-400 mb-2 italic uppercase">Tug Of Quiz</h1>
         <p class="text-gray-400 mb-8">Multiplayer Prototype (Horizontal)</p>
         <input type="text" id="room-id-input" class="room-input" placeholder="Enter Room ID">
-        <button class="bg-blue-600 px-12 py-4 rounded-xl font-bold uppercase tracking-wider hover:bg-blue-700 transition shadow-lg" id="join-btn">Join Room</button>
-
+        <button class="bg-blue-600 px-12 py-4 rounded-xl font-bold uppercase tracking-wider hover:bg-blue-700 transition shadow-lg text-white" id="join-btn">
+            Join Room
+        </button>
     </div>
 
     <div id="win-overlay" style="display:none;">
         <h2 class="text-6xl font-black mb-4 italic" id="win-title"></h2>
-        <button class="bg-white text-black px-12 py-4 rounded-full font-bold text-xl" onclick="location.reload()">PLAY AGAIN</button>
+        <button class="bg-white text-black px-12 py-4 rounded-full font-bold text-xl hover:bg-gray-200 transition" onclick="location.reload()">PLAY AGAIN</button>
     </div>
 </div>
 
 <script>
-
 const socket = io("https://Aloharean-Tug-Of-Quiz.hf.space");
-
-
-
-
-
-
-
-
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
 let W, H;
@@ -109,21 +86,12 @@ let W, H;
 const game = { 
     active: false, ropeX: 0, targetRopeX: 0, winLimit: 250, 
     roomId: null, myTeam: null, redCount: 0, blueCount: 0, currentQ: null 
-
-
-
-
-
-
-
 };
 
 const allQ = [
     {q:"7 + 8",a:"15"},{q:"9 × 6",a:"54"},{q:"100 - 37",a:"63"},
     {q:"Capital of UK?",a:"london"},{q:"Legs on a cow?",a:"4"}
 ];
-
-
 
 document.getElementById('join-btn').onclick = () => {
     const id = document.getElementById('room-id-input').value.trim();
@@ -140,8 +108,6 @@ socket.on('init-player', (data) => {
     document.getElementById('panel-' + game.myTeam).style.display = 'flex';
     game.active = true;
     nextQ(); resize(); animate();
-
-
 });
 
 socket.on('room-update', (data) => {
@@ -152,38 +118,14 @@ socket.on('room-update', (data) => {
 socket.on('rope-moved', (newX) => {
     game.targetRopeX = newX;
     if (Math.abs(newX) >= game.winLimit) endGame(newX < 0 ? 'Red' : 'Blue');
-
-
 });
-
 
 function nextQ() {
     game.currentQ = allQ[Math.floor(Math.random() * allQ.length)];
     document.getElementById('q-' + game.myTeam).textContent = game.currentQ.q;
     const inp = document.getElementById('inp-' + game.myTeam);
     inp.value = ""; inp.focus();
-
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function checkAns() {
     const inp = document.getElementById('inp-' + game.myTeam);
@@ -193,15 +135,18 @@ function checkAns() {
     } else { inp.value = ""; }
 }
 
-function resize() { W = window.innerWidth; H = window.innerHeight; canvas.width = W; canvas.height = H; }
+function resize() { 
+    W = window.innerWidth; 
+    H = window.innerHeight; 
+    canvas.width = W; 
+    canvas.height = H; 
+}
 window.onresize = resize; resize();
 
 function drawPlayer(cy, x, color, index) {
     const r = 25, bh = 50;
     const isTop = index % 2 === 0;
     const y = isTop ? cy - (r + bh + 5) : cy + 5;
-
-
 
     // Body
     ctx.fillStyle = color;
@@ -213,11 +158,6 @@ function drawPlayer(cy, x, color, index) {
     ctx.fillStyle = "#E1AD01";
     ctx.beginPath();
     ctx.arc(x, isTop ? y : y + bh, r, Math.PI, 0);
-
-
-
-
-
     ctx.fill();
 
     // Hands (Locked to rope)
@@ -229,40 +169,41 @@ function drawPlayer(cy, x, color, index) {
 
 function animate() {
     if (!game.active) return;
-
-
     game.ropeX += (game.targetRopeX - game.ropeX) * 0.1;
     ctx.clearRect(0, 0, W, H);
     
     const cx = W/2, cy = H/2, rx = cx + game.ropeX;
-    
 
+    // 1. Background Grid Reference
+    ctx.strokeStyle = "rgba(255,255,255,0.03)";
+    ctx.lineWidth = 1;
+    for(let i=0; i<W; i+=50) {
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.stroke();
+    }
 
+    // 2. Goal Lines
+    ctx.lineWidth = 4;
+    ctx.setLineDash([10, 10]);
+    // Red Goal (Left)
+    ctx.strokeStyle = "rgba(239, 68, 68, 0.6)";
+    ctx.beginPath(); ctx.moveTo(cx - game.winLimit, cy - 120); ctx.lineTo(cx - game.winLimit, cy + 120); ctx.stroke();
+    // Blue Goal (Right)
+    ctx.strokeStyle = "rgba(59, 130, 246, 0.6)";
+    ctx.beginPath(); ctx.moveTo(cx + game.winLimit, cy - 120); ctx.lineTo(cx + game.winLimit, cy + 120); ctx.stroke();
+    ctx.setLineDash([]);
 
-
-
-
-
-
-
-
-
-    // Rope
+    // 3. Rope
     ctx.strokeStyle = "#8B4513"; ctx.lineWidth = 10;
     ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
 
-    // Marker
-    ctx.fillStyle = "red"; ctx.font = "bold 40px Arial"; ctx.textAlign = "center";
+    // 4. Center Marker (The "X")
+    ctx.fillStyle = "#ef4444"; ctx.font = "bold 40px Arial"; ctx.textAlign = "center";
     ctx.fillText("X", rx, cy + 15);
 
-    // Players
+    // 5. Players
     const spacing = 70;
     for(let i=0; i<game.redCount; i++) drawPlayer(cy, rx - 100 - (i*spacing), "#ef4444", i);
     for(let i=0; i<game.blueCount; i++) drawPlayer(cy, rx + 100 + (i*spacing), "#3b82f6", i);
-
-
-
-
 
     requestAnimationFrame(animate);
 }
@@ -275,11 +216,8 @@ function endGame(winner) {
     t.style.color = winner === 'Red' ? '#ef4444' : '#3b82f6';
 }
 
-
 document.getElementById('inp-red').onkeydown = e => { if(e.key==='Enter') checkAns(); };
 document.getElementById('inp-blue').onkeydown = e => { if(e.key==='Enter') checkAns(); };
-
-
 </script>
 </body>
 </html>
