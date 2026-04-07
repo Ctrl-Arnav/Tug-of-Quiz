@@ -106,26 +106,22 @@
 
     socket.on("join-response", (res) => {
         if(!res.success) return alert(res.message);
-        
         mySide = res.side;
         document.getElementById('name-red').innerText = res.redName;
         document.getElementById('name-blue').innerText = res.blueName;
-        
         document.getElementById('entry-overlay').style.display = 'none';
-        document.getElementById('panel-' + mySide).style.display = 'flex';
-        
-        game.active = true;
     });
 
     socket.on("start-match", (data) => {
         game.active = true;
         updateQuestion(data.question);
-        game.redCount = data.redCount || 1;
-        game.blueCount = data.blueCount || 1;
+        game.redCount = data.redCount;
+        game.blueCount = data.blueCount;
+        document.getElementById('panel-' + mySide).style.display = 'flex';
+        resize();
         animate();
     });
 
-    // FIXED: Listen for the new-question event from the server
     socket.on("new-question", (q) => {
         updateQuestion(q);
     });
@@ -146,7 +142,8 @@
         game.currentQ = qObj;
         document.getElementById('q-' + mySide).textContent = qObj.q;
         const inp = document.getElementById('inp-' + mySide);
-        inp.value = ""; inp.focus();
+        inp.value = ""; 
+        inp.focus();
     }
 
     function checkAns() {
@@ -171,14 +168,18 @@
         const r = 25, bh = 50;
         const isTop = index % 2 === 0;
         const y = isTop ? cy - (r + bh + 5) : cy + 5;
+
         ctx.fillStyle = color;
         ctx.beginPath();
         ctx.roundRect(x - r, y, r * 2, bh, [10]);
         ctx.fill();
+
         ctx.fillStyle = "#E1AD01";
         ctx.beginPath();
         ctx.arc(x, isTop ? y : y + bh, r, Math.PI, 0);
         ctx.fill();
+
+        // Locked hands
         ctx.beginPath();
         ctx.arc(x - 10, cy, 6, 0, Math.PI * 2);
         ctx.arc(x + 10, cy, 6, 0, Math.PI * 2);
@@ -192,23 +193,26 @@
         
         const cx = W/2, cy = H/2, rx = cx + game.ropeX;
 
+        // Grid
         ctx.strokeStyle = "rgba(255,255,255,0.03)";
-        ctx.lineWidth = 1;
         for(let i=0; i<W; i+=50) {
             ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.stroke();
         }
 
+        // Goals
         ctx.lineWidth = 4; ctx.setLineDash([10, 10]);
         ctx.strokeStyle = "rgba(239, 68, 68, 0.3)"; ctx.strokeRect(cx - game.winLimit, cy - 120, 2, 240);
         ctx.strokeStyle = "rgba(59, 130, 246, 0.3)"; ctx.strokeRect(cx + game.winLimit, cy - 120, 2, 240);
         ctx.setLineDash([]);
 
+        // Rope
         ctx.strokeStyle = "#8B4513"; ctx.lineWidth = 10;
         ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
         
         ctx.fillStyle = "#ef4444"; ctx.font = "bold 40px Arial"; ctx.textAlign = "center";
         ctx.fillText("X", rx, cy + 15);
 
+        // Drawing multiple players
         const spacing = 70;
         for(let i=0; i<game.redCount; i++) drawPlayer(cy, rx - 100 - (i*spacing), "#ef4444", i);
         for(let i=0; i<game.blueCount; i++) drawPlayer(cy, rx + 100 + (i*spacing), "#3b82f6", i);
