@@ -89,7 +89,6 @@
         room: null, redCount: 0, blueCount: 0, currentQ: null 
     };
 
-    // Auto-fill Team ID if coming from Hub
     window.onload = () => {
         const savedID = localStorage.getItem('currentTeamID');
         if(savedID) document.getElementById('team-id-input').value = savedID;
@@ -116,7 +115,6 @@
         document.getElementById('panel-' + mySide).style.display = 'flex';
         
         game.active = true;
-        // The server will trigger 'start-match' when two teams are ready
     });
 
     socket.on("start-match", (data) => {
@@ -125,6 +123,11 @@
         game.redCount = data.redCount || 1;
         game.blueCount = data.blueCount || 1;
         animate();
+    });
+
+    // FIXED: Listen for the new-question event from the server
+    socket.on("new-question", (q) => {
+        updateQuestion(q);
     });
 
     socket.on("rope-moved", (data) => {
@@ -150,7 +153,6 @@
         const inp = document.getElementById('inp-' + mySide);
         if (!game.currentQ) return;
         
-        // Match logic that handles numeric answers too
         if (inp.value.toString().trim().toLowerCase() === game.currentQ.a.toString().toLowerCase()) {
             socket.emit('pull', { room: game.room, team: mySide });
             inp.value = "";
@@ -159,7 +161,6 @@
         }
     }
 
-    // --- RENDERING ENGINE ---
     function resize() { 
         W = window.innerWidth; H = window.innerHeight; 
         canvas.width = W; canvas.height = H; 
@@ -170,20 +171,14 @@
         const r = 25, bh = 50;
         const isTop = index % 2 === 0;
         const y = isTop ? cy - (r + bh + 5) : cy + 5;
-
-        // Body
         ctx.fillStyle = color;
         ctx.beginPath();
         ctx.roundRect(x - r, y, r * 2, bh, [10]);
         ctx.fill();
-
-        // Head (Mustard)
         ctx.fillStyle = "#E1AD01";
         ctx.beginPath();
         ctx.arc(x, isTop ? y : y + bh, r, Math.PI, 0);
         ctx.fill();
-
-        // Hands (Locked to rope)
         ctx.beginPath();
         ctx.arc(x - 10, cy, 6, 0, Math.PI * 2);
         ctx.arc(x + 10, cy, 6, 0, Math.PI * 2);
@@ -197,28 +192,23 @@
         
         const cx = W/2, cy = H/2, rx = cx + game.ropeX;
 
-        // Grid
         ctx.strokeStyle = "rgba(255,255,255,0.03)";
         ctx.lineWidth = 1;
         for(let i=0; i<W; i+=50) {
             ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.stroke();
         }
 
-        // Goal Lines
         ctx.lineWidth = 4; ctx.setLineDash([10, 10]);
         ctx.strokeStyle = "rgba(239, 68, 68, 0.3)"; ctx.strokeRect(cx - game.winLimit, cy - 120, 2, 240);
         ctx.strokeStyle = "rgba(59, 130, 246, 0.3)"; ctx.strokeRect(cx + game.winLimit, cy - 120, 2, 240);
         ctx.setLineDash([]);
 
-        // Rope
         ctx.strokeStyle = "#8B4513"; ctx.lineWidth = 10;
         ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
         
-        // Center Marker (The "X")
         ctx.fillStyle = "#ef4444"; ctx.font = "bold 40px Arial"; ctx.textAlign = "center";
         ctx.fillText("X", rx, cy + 15);
 
-        // Players
         const spacing = 70;
         for(let i=0; i<game.redCount; i++) drawPlayer(cy, rx - 100 - (i*spacing), "#ef4444", i);
         for(let i=0; i<game.blueCount; i++) drawPlayer(cy, rx + 100 + (i*spacing), "#3b82f6", i);
