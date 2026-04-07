@@ -4,315 +4,237 @@
     <link rel="icon" href="https://fav.farm/🪢" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tug Of Quiz - Match Arena</title>
+    <title>Tug Of Quiz - Arena</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background: #050b14; overflow: hidden; color: white; }
+        body { font-family: sans-serif; background: #0a1628; overflow: hidden; color: white; }
+        #root { display: flex; height: 100vh; width: 100vw; flex-direction: column; position: relative; }
         
-        /* 1. ENTRY & READY OVERLAYS */
-        .overlay {
-            position: absolute; inset: 0; z-index: 100;
-            background: rgba(5, 11, 20, 0.95);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            backdrop-filter: blur(10px);
+        .panel {
+            position: absolute; width: 100%; height: 130px; 
+            display: none; flex-direction: row; align-items: center; 
+            justify-content: center; padding: 0 40px; z-index: 10; gap: 20px;
+            background: rgba(10, 18, 40, 0.9);
+        }
+        #panel-red { top: 0; border-bottom: 2px solid rgba(239,68,68,0.3); }
+        #panel-blue { bottom: 0; border-top: 2px solid rgba(59,130,246,0.3); }
+
+        .ans-input {
+            width: 280px; border: 2px solid rgba(255,255,255,0.1); border-radius: 12px;
+            padding: 12px; font-size: 18px; text-align: center; background: rgba(255,255,255,0.05);
+            color: white; outline: none; transition: all 0.2s;
+        }
+        .ans-input.red:focus { border-color: #ef4444; background: rgba(239,68,68,0.05); }
+        .ans-input.blue:focus { border-color: #3b82f6; background: rgba(59,130,246,0.05); }
+
+        #menu-overlay, #ready-screen, #win-overlay {
+            position: absolute; inset: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 40;
+            background: rgba(10,18,40,0.98);
         }
         .std-input { 
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); 
-            padding: 15px; border-radius: 12px; color: white; outline: none; 
-            text-align: center; font-size: 1.1rem; width: 320px; transition: all 0.3s;
-        }
-        .std-input:focus { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
-
-        #ready-btn {
-            background: #22c55e; color: white; font-weight: 900; padding: 25px 80px;
-            border-radius: 100px; font-size: 2rem; transition: all 0.3s;
-            box-shadow: 0 10px 40px rgba(34, 197, 94, 0.3); cursor: pointer;
-        }
-        #ready-btn:hover { transform: scale(1.05) translateY(-5px); background: #16a34a; }
-        #ready-btn.waiting { background: #334155; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.6; }
-
-        /* 2. HUD & GAME UI */
-        #match-hud {
-            position: absolute; top: 0; width: 100%; height: 120px;
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 0 50px; z-index: 20; pointer-events: none;
-            background: linear-gradient(to bottom, rgba(5,11,20,0.8), transparent);
-        }
-        .team-box { display: flex; flex-direction: column; align-items: center; min-width: 250px; }
-        .team-name { font-size: 1.8rem; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; }
-        .score-dots { display: flex; gap: 10px; margin-top: 8px; }
-        .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); }
-        .dot.active.red { background: #ef4444; border-color: #ef4444; box-shadow: 0 0 15px #ef4444; }
-        .dot.active.blue { background: #3b82f6; border-color: #3b82f6; box-shadow: 0 0 15px #3b82f6; }
-
-        #timer-container { text-align: center; background: rgba(0,0,0,0.5); padding: 10px 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); }
-        #timer-val { font-family: monospace; font-size: 3.5rem; font-weight: 900; line-height: 1; }
-        #round-label { font-size: 0.7rem; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 4px; }
-
-        /* 3. INPUT PANELS */
-        .ans-panel {
-            position: absolute; width: 100%; height: 130px; display: none;
-            align-items: center; justify-content: center; z-index: 10; gap: 30px;
-            background: rgba(5, 11, 20, 0.9); backdrop-filter: blur(5px);
-        }
-        #panel-red { top: 120px; border-bottom: 3px solid #ef4444; }
-        #panel-blue { bottom: 0; border-top: 3px solid #3b82f6; }
-
-        #announcer {
-            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-            z-index: 80; pointer-events: none; opacity: 0; transition: opacity 0.3s;
-            font-size: 6rem; font-weight: 900; font-style: italic; text-transform: uppercase;
-            text-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); 
+            padding: 12px; border-radius: 8px; margin-bottom: 16px; text-align: center; 
+            font-size: 18px; color: white; outline: none; width: 280px;
         }
     </style>
 </head>
 <body>
 
-<div id="entry-overlay" class="overlay">
-    <h1 class="text-6xl font-black italic text-blue-500 mb-2 uppercase">Match Entry</h1>
-    <p class="text-gray-500 mb-10 font-bold tracking-widest uppercase text-xs">Verify Room & Team Credentials</p>
-    <div class="flex flex-col gap-4">
-        <input type="text" id="room-id" class="std-input" placeholder="Room ID (e.g. 101)">
-        <input type="text" id="player-name" class="std-input" placeholder="Your Display Name">
-        <input type="text" id="team-id" class="std-input" placeholder="Team ID (from Hub)">
-        <button id="join-btn" class="bg-blue-600 p-5 rounded-xl font-black uppercase hover:bg-blue-500 transition shadow-2xl">Enter Arena</button>
-        <p id="error-msg" class="text-red-500 text-sm text-center font-bold opacity-0 transition-opacity">No such team in this room!</p>
-    </div>
-</div>
+<div id="root">
+    <canvas id="stage"></canvas>
 
-<div id="ready-overlay" class="overlay" style="display: none;">
-    <div id="ready-container" class="text-center">
-        <button id="ready-btn">READY</button>
-        <p id="ready-status" class="mt-8 text-gray-400 font-bold uppercase tracking-widest text-sm">Waiting for opponents...</p>
+    <div class="panel" id="panel-red">
+        <div class="text-center mr-4">
+            <div id="name-red" class="bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-[10px] uppercase font-bold mb-1">Red Team</div>
+            <div class="q-text font-bold text-lg" id="q-red">---</div>
+        </div>
+        <input class="ans-input red" id="inp-red" type="text" placeholder="Answer..." autocomplete="off" />
     </div>
-</div>
 
-<div id="match-hud">
-    <div class="team-box">
-        <div id="display-red" class="team-name text-red-500">Team Red</div>
-        <div class="score-dots" id="dots-red"><div class="dot"></div><div class="dot"></div></div>
+    <div class="panel" id="panel-blue">
+        <div class="text-center mr-4">
+            <div id="name-blue" class="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-[10px] uppercase font-bold mb-1">Blue Team</div>
+            <div class="q-text font-bold text-lg" id="q-blue">---</div>
+        </div>
+        <input class="ans-input blue" id="inp-blue" type="text" placeholder="Answer..." autocomplete="off" />
     </div>
-    <div id="timer-container">
-        <div id="round-label">Round 1</div>
-        <div id="timer-val">03:00</div>
-    </div>
-    <div class="team-box">
-        <div id="display-blue" class="team-name text-blue-500">Team Blue</div>
-        <div class="score-dots" id="dots-blue"><div class="dot"></div><div class="dot"></div></div>
-    </div>
-</div>
 
-<div id="announcer">ROUND 1</div>
-
-<canvas id="stage"></canvas>
-
-<div class="ans-panel" id="panel-red">
-    <div class="text-center mr-8">
-        <div class="text-[10px] text-red-400 font-black uppercase">Question</div>
-        <div id="q-red" class="text-2xl font-black">---</div>
+    <div id="menu-overlay">
+        <h1 class="text-5xl font-black text-blue-400 mb-2 italic uppercase">ARENA ENTRY</h1>
+        <p class="text-gray-400 mb-8 uppercase text-xs tracking-widest">Verify Room & Team ID</p>
+        <input type="text" id="room-input" class="std-input" placeholder="Enter Room ID">
+        <input type="text" id="team-id-input" class="std-input" placeholder="Enter Team ID">
+        <button class="bg-blue-600 px-12 py-4 rounded-xl font-bold uppercase hover:bg-blue-700 transition text-white" onclick="join()">
+            Join Match
+        </button>
     </div>
-    <input type="text" id="inp-red" class="std-input" placeholder="Type answer..." autocomplete="off" />
-</div>
 
-<div class="ans-panel" id="panel-blue">
-    <div class="text-center mr-8">
-        <div class="text-[10px] text-blue-400 font-black uppercase">Question</div>
-        <div id="q-blue" class="text-2xl font-black">---</div>
+    <div id="ready-screen" style="display:none;">
+        <h2 class="text-3xl font-black mb-6 italic">TEAM JOINED</h2>
+        <button id="ready-btn" onclick="sendReady()" class="bg-green-600 px-16 py-6 rounded-full text-4xl font-black hover:bg-green-500 transition">
+            READY
+        </button>
+        <p id="ready-status" class="mt-4 text-gray-500 uppercase text-xs">Waiting for both teams...</p>
     </div>
-    <input type="text" id="inp-blue" class="std-input" placeholder="Type answer..." autocomplete="off" />
+
+    <div id="win-overlay" style="display:none;">
+        <h2 class="text-6xl font-black mb-4 italic" id="win-title"></h2>
+        <button class="bg-white text-black px-12 py-4 rounded-full font-bold text-xl hover:bg-gray-200 transition" onclick="location.reload()">PLAY AGAIN</button>
+    </div>
 </div>
 
 <script>
-const socket = io("https://Aloharean-Tug-Of-Quiz.hf.space");
-const canvas = document.getElementById('stage');
-const ctx = canvas.getContext('2d');
-let W, H;
+    const socket = io("https://Aloharean-Tug-Of-Quiz.hf.space");
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    let W, H, mySide;
 
-const match = {
-    active: false, timer: 180, ropeX: 0, targetRopeX: 0, winLimit: 280,
-    team1: { name: "Red", players: 0, wins: 0 },
-    team2: { name: "Blue", players: 0, wins: 0 },
-    myTeam: null, room: null
-};
+    const game = { 
+        active: false, 
+        ropeX: 0, 
+        targetRopeX: 0, 
+        winLimit: 250, 
+        room: null, 
+        redCount: 0, 
+        blueCount: 0, 
+        currentQ: null 
+    };
 
-window.onload = () => {
-    document.getElementById('team-id').value = localStorage.getItem('currentTeamID') || "";
-    resize(); animate();
-};
+    // Initialize Auto-fill from Hub
+    window.onload = () => {
+        const savedID = localStorage.getItem('currentTeamID');
+        if(savedID) document.getElementById('team-id-input').value = savedID;
+        resize();
+    };
 
-document.getElementById('join-btn').onclick = () => {
-    const rid = document.getElementById('room-id').value.trim();
-    const tid = document.getElementById('team-id').value.trim().toUpperCase();
-    const name = document.getElementById('player-name').value.trim();
-    if(!rid || !tid) return alert("Room ID & Team ID required!");
-    
-    match.room = rid;
-    socket.emit('join-room', { room: rid, name: name, teamID: tid });
-};
-
-socket.on('join-response', (res) => {
-    if(res.success) {
-        match.myTeam = res.assignedSide;
-        document.getElementById('display-red').textContent = res.redTeamName;
-        document.getElementById('display-blue').textContent = res.blueTeamName;
-        document.getElementById('entry-overlay').style.display = 'none';
-        document.getElementById('ready-overlay').style.display = 'flex';
-    } else {
-        alert(res.message);
-    }
-});
-
-document.getElementById('ready-btn').onclick = function() {
-    if(this.classList.contains('waiting')) return;
-    this.textContent = "WAITING...";
-    this.classList.add('waiting');
-    // Ensure room ID is sent back to server
-    socket.emit('player-ready', { room: match.room });
-};
-
-socket.on('update-lobby', (data) => {
-    // FORCE UI UPDATE
-    const status = document.getElementById('ready-status');
-    status.textContent = `${data.readyCount}/${data.totalPlayers} Players Ready`;
-    
-    // Update player counts for drawing
-    match.team1.players = data.redCount;
-    match.team2.players = data.blueCount;
-});
-
-socket.on('start-match', () => {
-    document.getElementById('ready-overlay').style.display = 'none';
-    match.active = true;
-    startRound();
-});
-
-// ... (Keep the Round Logic and Drawing Engine from the previous full snippet) ...
-// Ensure you include the animate() and drawPlayer() functions here!
-</script>
-
-// 4. GAMEPLAY LOGIC
-function startRound() {
-    match.timer = 180;
-    match.ropeX = 0; match.targetRopeX = 0;
-    document.getElementById('panel-' + match.myTeam).style.display = 'flex';
-    announce(`ROUND ${match.currentRound}`, 2000);
-    
-    const tick = setInterval(() => {
-        if(!match.active) { clearInterval(tick); return; }
-        match.timer--;
-        updateTimerUI();
-        if(match.timer <= 0) endRound(null);
-    }, 1000);
-
-    nextQuestion();
-}
-
-function updateTimerUI() {
-    const m = Math.floor(match.timer / 60);
-    const s = match.timer % 60;
-    document.getElementById('timer-val').textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-}
-
-function nextQuestion() {
-    match.currentQ = questions[Math.floor(Math.random() * questions.length)];
-    document.getElementById('q-' + match.myTeam).textContent = match.currentQ.q;
-    const inp = document.getElementById('inp-' + match.myTeam);
-    inp.value = ""; inp.focus();
-}
-
-function checkAns() {
-    const inp = document.getElementById('inp-' + match.myTeam);
-    if(inp.value.trim().toLowerCase() === match.currentQ.a.toLowerCase()) {
-        socket.emit('pull', { room: match.room, team: match.myTeam });
-        nextQuestion();
-    } else { inp.value = ""; }
-}
-
-document.getElementById('inp-red').onkeydown = e => { if(e.key==='Enter') checkAns(); };
-document.getElementById('inp-blue').onkeydown = e => { if(e.key==='Enter') checkAns(); };
-
-socket.on('rope-moved', (newX) => {
-    match.targetRopeX = newX;
-    if(Math.abs(newX) >= match.winLimit) endRound(newX < 0 ? 'red' : 'blue');
-});
-
-function endRound(winner) {
-    match.active = false;
-    document.getElementById('panel-red').style.display = 'none';
-    document.getElementById('panel-blue').style.display = 'none';
-
-    if(winner) {
-        match[winner === 'red' ? 'team1' : 'team2'].wins++;
-        updateDots(winner);
-        announce(`${winner.toUpperCase()} WINS ROUND!`, 2000);
+    function join() {
+        const room = document.getElementById('room-input').value.trim();
+        const teamID = document.getElementById('team-id-input').value.trim().toUpperCase();
+        if(!room || !teamID) return alert("Please fill in both IDs!");
+        
+        game.room = room;
+        socket.emit("join-room", { room, teamID });
     }
 
-    setTimeout(() => {
-        if(match.team1.wins >= 2 || match.team2.wins >= 2) {
-            announce("MATCH OVER", 5000);
-            setTimeout(() => location.reload(), 6000);
-        } else {
-            match.currentRound++;
-            document.getElementById('round-label').textContent = `Round ${match.currentRound}`;
-            startRound();
+    socket.on("join-response", (res) => {
+        if(!res.success) return alert(res.message);
+        
+        mySide = res.side;
+        document.getElementById('name-red').innerText = res.redName;
+        document.getElementById('name-blue').innerText = res.blueName;
+        
+        document.getElementById('menu-overlay').style.display = 'none';
+        document.getElementById('ready-screen').style.display = 'flex';
+    });
+
+    function sendReady() {
+        socket.emit("player-ready", { room: game.room });
+        const btn = document.getElementById('ready-btn');
+        btn.innerText = "WAITING...";
+        btn.disabled = true;
+        btn.classList.replace('bg-green-600', 'bg-gray-600');
+    }
+
+    socket.on("lobby-update", (data) => {
+        game.redCount = data.redCount;
+        game.blueCount = data.blueCount;
+    });
+
+    socket.on("start-match", (data) => {
+        document.getElementById('ready-screen').style.display = 'none';
+        document.getElementById('panel-' + mySide).style.display = 'flex';
+        game.active = true;
+        if(data.question) updateQuestion(data.question);
+        animate();
+    });
+
+    socket.on("rope-moved", (data) => {
+        game.targetRopeX = data.ropeX;
+    });
+
+    socket.on("round-end", (data) => {
+        game.active = false;
+        const winTitle = document.getElementById('win-title');
+        document.getElementById('win-overlay').style.display = 'flex';
+        winTitle.innerText = data.winner.toUpperCase() + " WINS ROUND!";
+        winTitle.style.color = data.winner === 'red' ? '#ef4444' : '#3b82f6';
+
+        if(!data.isMatchOver) {
+            setTimeout(() => {
+                document.getElementById('win-overlay').style.display = 'none';
+                game.ropeX = 0;
+                game.targetRopeX = 0;
+            }, 3000);
         }
-    }, 3000);
-}
+    });
 
-function updateDots(side) {
-    const dots = document.getElementById(`dots-${side}`).children;
-    const count = match[side === 'red' ? 'team1' : 'team2'].wins;
-    for(let i=0; i<count; i++) dots[i].classList.add('active', side);
-}
+    function updateQuestion(qObj) {
+        game.currentQ = qObj;
+        document.getElementById('q-' + mySide).textContent = qObj.q;
+        const inp = document.getElementById('inp-' + mySide);
+        inp.value = ""; inp.focus();
+    }
 
-function announce(msg, dur) {
-    const el = document.getElementById('announcer');
-    el.textContent = msg; el.style.opacity = 1;
-    setTimeout(() => el.style.opacity = 0, dur);
-}
+    function checkAns() {
+        const inp = document.getElementById('inp-' + mySide);
+        if (inp.value.trim().toLowerCase() === game.currentQ.a.toLowerCase()) {
+            socket.emit('pull', { room: game.room, team: mySide });
+            // New question will come from server via start-next-round/update-q
+        } else {
+            inp.value = "";
+        }
+    }
 
-// 5. RENDERING ENGINE
-function drawPlayer(cy, x, color, index) {
-    const r = 25, bh = 50;
-    const isTop = index % 2 === 0;
-    const y = isTop ? cy - (r + bh + 5) : cy + 5;
-    ctx.fillStyle = color;
-    ctx.beginPath(); ctx.roundRect(x - r, y, r * 2, bh, [10]); ctx.fill();
-    ctx.fillStyle = "#E1AD01"; // Head
-    ctx.beginPath(); ctx.arc(x, isTop ? y : y + bh, r, Math.PI, 0); ctx.fill();
-}
+    function resize() { 
+        W = window.innerWidth; H = window.innerHeight; 
+        canvas.width = W; canvas.height = H; 
+    }
+    window.onresize = resize;
 
-function animate() {
-    ctx.clearRect(0, 0, W, H);
-    const cx = W/2, cy = H/2;
-    match.ropeX += (match.targetRopeX - match.ropeX) * 0.1;
-    const rx = cx + match.ropeX;
+    function drawPlayer(cy, x, color, index) {
+        const r = 25, bh = 50;
+        const isTop = index % 2 === 0;
+        const y = isTop ? cy - (r + bh + 5) : cy + 5;
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.roundRect(x - r, y, r * 2, bh, [10]); ctx.fill();
+        ctx.fillStyle = "#E1AD01";
+        ctx.beginPath(); ctx.arc(x, isTop ? y : y + bh, r, Math.PI, 0); ctx.fill();
+    }
 
-    // Background Grid
-    ctx.strokeStyle = "rgba(255,255,255,0.03)";
-    for(let i=0; i<W; i+=50) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.stroke(); }
+    function animate() {
+        if (!game.active) return;
+        game.ropeX += (game.targetRopeX - game.ropeX) * 0.1;
+        ctx.clearRect(0, 0, W, H);
+        
+        const cx = W/2, cy = H/2, rx = cx + game.ropeX;
 
-    // Goal Lines
-    ctx.lineWidth = 4; ctx.setLineDash([10, 10]);
-    ctx.strokeStyle = "rgba(239, 68, 68, 0.3)"; ctx.strokeRect(cx - match.winLimit, cy-120, 2, 240);
-    ctx.strokeStyle = "rgba(59, 130, 246, 0.3)"; ctx.strokeRect(cx + match.winLimit, cy-120, 2, 240);
-    ctx.setLineDash([]);
+        // Grid
+        ctx.strokeStyle = "rgba(255,255,255,0.03)";
+        for(let i=0; i<W; i+=50) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.stroke(); }
 
-    // Rope
-    ctx.strokeStyle = "#8B4513"; ctx.lineWidth = 10;
-    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
-    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(rx, cy, 10, 0, Math.PI*2); ctx.fill();
+        // Goals
+        ctx.lineWidth = 4; ctx.setLineDash([10, 10]);
+        ctx.strokeStyle = "rgba(239, 68, 68, 0.3)"; ctx.strokeRect(cx - game.winLimit, cy - 120, 2, 240);
+        ctx.strokeStyle = "rgba(59, 130, 246, 0.3)"; ctx.strokeRect(cx + game.winLimit, cy - 120, 2, 240);
+        ctx.setLineDash([]);
 
-    // Players
-    const spacing = 70;
-    for(let i=0; i<match.team1.players; i++) drawPlayer(cy, rx - 100 - (i*spacing), "#ef4444", i);
-    for(let i=0; i<match.team2.players; i++) drawPlayer(cy, rx + 100 + (i*spacing), "#3b82f6", i);
+        // Rope
+        ctx.strokeStyle = "#8B4513"; ctx.lineWidth = 10;
+        ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(rx, cy, 10, 0, Math.PI*2); ctx.fill();
 
-    requestAnimationFrame(animate);
-}
+        // Players
+        for(let i=0; i<game.redCount; i++) drawPlayer(cy, rx - 100 - (i*70), "#ef4444", i);
+        for(let i=0; i<game.blueCount; i++) drawPlayer(cy, rx + 100 + (i*70), "#3b82f6", i);
+
+        requestAnimationFrame(animate);
+    }
+
+    document.getElementById('inp-red').onkeydown = e => { if(e.key==='Enter') checkAns(); };
+    document.getElementById('inp-blue').onkeydown = e => { if(e.key==='Enter') checkAns(); };
 </script>
 </body>
 </html>
