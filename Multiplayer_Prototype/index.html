@@ -132,72 +132,53 @@ const ctx = canvas.getContext('2d');
 let W, H;
 
 const match = {
-    active: false, timer: 180, currentRound: 1, winLimit: 280,
-    ropeX: 0, targetRopeX: 0,
-    team1: { name: "Red", wins: 0, players: 0 },
-    team2: { name: "Blue", wins: 0, players: 0 },
-    myTeam: null, room: null, playerName: ""
+    active: false, timer: 180, ropeX: 0, targetRopeX: 0, winLimit: 280,
+    team1: { name: "Red", players: 0, wins: 0 },
+    team2: { name: "Blue", players: 0, wins: 0 },
+    myTeam: null, room: null
 };
 
-const questions = [
-    {q:"15 + 27", a:"42"}, {q:"Capital of Japan?", a:"tokyo"},
-    {q:"Color of Emerald?", a:"green"}, {q:"8 x 9", a:"72"}
-];
-
-// 1. SYSTEM INITIALIZATION
 window.onload = () => {
-    const savedID = localStorage.getItem('currentTeamID');
-    if(savedID) document.getElementById('team-id').value = savedID;
-    resize();
-    animate();
+    document.getElementById('team-id').value = localStorage.getItem('currentTeamID') || "";
+    resize(); animate();
 };
 
-function resize() { W = window.innerWidth; H = window.innerHeight; canvas.width = W; canvas.height = H; }
-window.onresize = resize;
-
-// 2. JOIN & VALIDATION
 document.getElementById('join-btn').onclick = () => {
     const rid = document.getElementById('room-id').value.trim();
-    const name = document.getElementById('player-name').value.trim();
     const tid = document.getElementById('team-id').value.trim().toUpperCase();
-
-    if(!rid || !name || !tid) return alert("Fill all fields!");
-
+    const name = document.getElementById('player-name').value.trim();
+    if(!rid || !tid) return alert("Room ID & Team ID required!");
+    
+    match.room = rid;
     socket.emit('join-room', { room: rid, name: name, teamID: tid });
 };
 
 socket.on('join-response', (res) => {
     if(res.success) {
-        match.myTeam = res.assignedSide; // 'red' or 'blue'
-        match.team1.name = res.redTeamName;
-        match.team2.name = res.blueTeamName;
-        
-        document.getElementById('display-red').textContent = match.team1.name;
-        document.getElementById('display-blue').textContent = match.team2.name;
+        match.myTeam = res.assignedSide;
+        document.getElementById('display-red').textContent = res.redTeamName;
+        document.getElementById('display-blue').textContent = res.blueTeamName;
         document.getElementById('entry-overlay').style.display = 'none';
         document.getElementById('ready-overlay').style.display = 'flex';
     } else {
-        const err = document.getElementById('error-msg');
-        err.textContent = res.message;
-        err.style.opacity = 1;
+        alert(res.message);
     }
 });
 
-// 3. READY LOGIC
 document.getElementById('ready-btn').onclick = function() {
     if(this.classList.contains('waiting')) return;
     this.textContent = "WAITING...";
     this.classList.add('waiting');
+    // Ensure room ID is sent back to server
     socket.emit('player-ready', { room: match.room });
 };
 
 socket.on('update-lobby', (data) => {
+    // FORCE UI UPDATE
     const status = document.getElementById('ready-status');
-    if(data.redCount > 0 && data.blueCount > 0) {
-        status.textContent = `${data.readyCount}/${data.totalPlayers} Players Ready`;
-    } else {
-        status.textContent = "Waiting for an opposing team to join...";
-    }
+    status.textContent = `${data.readyCount}/${data.totalPlayers} Players Ready`;
+    
+    // Update player counts for drawing
     match.team1.players = data.redCount;
     match.team2.players = data.blueCount;
 });
@@ -207,6 +188,10 @@ socket.on('start-match', () => {
     match.active = true;
     startRound();
 });
+
+// ... (Keep the Round Logic and Drawing Engine from the previous full snippet) ...
+// Ensure you include the animate() and drawPlayer() functions here!
+</script>
 
 // 4. GAMEPLAY LOGIC
 function startRound() {
