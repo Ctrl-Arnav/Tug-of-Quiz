@@ -8,58 +8,99 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background: #0a1628; overflow: hidden; color: white; }
+        body { font-family: 'Inter', sans-serif; background: #050b14; overflow: hidden; color: white; }
         
-        /* HUD Styles */
+        /* 1. ENTRY & READY OVERLAYS */
+        .overlay {
+            position: absolute; inset: 0; z-index: 100;
+            background: rgba(5, 11, 20, 0.95);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+        .std-input { 
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); 
+            padding: 15px; border-radius: 12px; color: white; outline: none; 
+            text-align: center; font-size: 1.1rem; width: 320px; transition: all 0.3s;
+        }
+        .std-input:focus { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+
+        #ready-btn {
+            background: #22c55e; color: white; font-weight: 900; padding: 25px 80px;
+            border-radius: 100px; font-size: 2rem; transition: all 0.3s;
+            box-shadow: 0 10px 40px rgba(34, 197, 94, 0.3); cursor: pointer;
+        }
+        #ready-btn:hover { transform: scale(1.05) translateY(-5px); background: #16a34a; }
+        #ready-btn.waiting { background: #334155; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.6; }
+
+        /* 2. HUD & GAME UI */
         #match-hud {
-            position: absolute; top: 0; width: 100%; height: 100px;
+            position: absolute; top: 0; width: 100%; height: 120px;
             display: flex; justify-content: space-between; align-items: center;
-            padding: 0 40px; background: linear-gradient(to bottom, rgba(10,22,40,0.9), transparent);
-            z-index: 20;
+            padding: 0 50px; z-index: 20; pointer-events: none;
+            background: linear-gradient(to bottom, rgba(5,11,20,0.8), transparent);
         }
-        .team-name-display { font-size: 1.5rem; font-weight: 900; text-transform: uppercase; }
-        .score-dots { display: flex; gap: 8px; margin-top: 4px; }
-        .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); }
-        .dot.active.red { background: #ef4444; border-color: #ef4444; box-shadow: 0 0 10px #ef4444; }
-        .dot.active.blue { background: #3b82f6; border-color: #3b82f6; box-shadow: 0 0 10px #3b82f6; }
+        .team-box { display: flex; flex-direction: column; align-items: center; min-width: 250px; }
+        .team-name { font-size: 1.8rem; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; }
+        .score-dots { display: flex; gap: 10px; margin-top: 8px; }
+        .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); }
+        .dot.active.red { background: #ef4444; border-color: #ef4444; box-shadow: 0 0 15px #ef4444; }
+        .dot.active.blue { background: #3b82f6; border-color: #3b82f6; box-shadow: 0 0 15px #3b82f6; }
 
-        #timer-box { background: rgba(0,0,0,0.6); padding: 10px 25px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
-        #timer-display { font-family: monospace; font-size: 2.5rem; font-weight: bold; }
+        #timer-container { text-align: center; background: rgba(0,0,0,0.5); padding: 10px 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); }
+        #timer-val { font-family: monospace; font-size: 3.5rem; font-weight: 900; line-height: 1; }
+        #round-label { font-size: 0.7rem; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 4px; }
 
-        /* Input Panels */
-        .input-panel {
-            position: absolute; width: 100%; height: 120px; 
-            display: none; align-items: center; justify-content: center; 
-            z-index: 10; gap: 20px; background: rgba(10, 18, 40, 0.9);
+        /* 3. INPUT PANELS */
+        .ans-panel {
+            position: absolute; width: 100%; height: 130px; display: none;
+            align-items: center; justify-content: center; z-index: 10; gap: 30px;
+            background: rgba(5, 11, 20, 0.9); backdrop-filter: blur(5px);
         }
-        #panel-red { top: 100px; border-bottom: 2px solid #ef4444; }
-        #panel-blue { bottom: 0; border-top: 2px solid #3b82f6; }
-        .ans-input { width: 300px; padding: 12px; border-radius: 8px; background: #1a2638; color: white; border: 1px solid #334155; text-align: center; font-size: 1.2rem; outline: none; }
+        #panel-red { top: 120px; border-bottom: 3px solid #ef4444; }
+        #panel-blue { bottom: 0; border-top: 3px solid #3b82f6; }
 
-        #setup-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; background: #0a1628; }
-        #announcer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 50; pointer-events: none; opacity: 0; transition: opacity 0.3s; font-size: 5rem; font-weight: 900; font-style: italic; }
+        #announcer {
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            z-index: 80; pointer-events: none; opacity: 0; transition: opacity 0.3s;
+            font-size: 6rem; font-weight: 900; font-style: italic; text-transform: uppercase;
+            text-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
     </style>
 </head>
 <body>
 
-<div id="setup-overlay">
-    <h1 class="text-4xl font-black mb-6 text-blue-400">MATCH SETUP</h1>
-    <div class="flex flex-col gap-4 w-80">
-        <input type="text" id="player-name-input" class="bg-gray-800 p-4 rounded-lg outline-none border border-gray-700" placeholder="Display Name">
-        <input type="text" id="team-id-input" class="bg-gray-800 p-4 rounded-lg outline-none border border-gray-700" placeholder="Team ID (from Hub)">
-        <button id="ready-btn" class="bg-blue-600 p-4 rounded-lg font-bold hover:bg-blue-500 transition">JOIN ARENA</button>
+<div id="entry-overlay" class="overlay">
+    <h1 class="text-6xl font-black italic text-blue-500 mb-2 uppercase">Match Entry</h1>
+    <p class="text-gray-500 mb-10 font-bold tracking-widest uppercase text-xs">Verify Room & Team Credentials</p>
+    <div class="flex flex-col gap-4">
+        <input type="text" id="room-id" class="std-input" placeholder="Room ID (e.g. 101)">
+        <input type="text" id="player-name" class="std-input" placeholder="Your Display Name">
+        <input type="text" id="team-id" class="std-input" placeholder="Team ID (from Hub)">
+        <button id="join-btn" class="bg-blue-600 p-5 rounded-xl font-black uppercase hover:bg-blue-500 transition shadow-2xl">Enter Arena</button>
+        <p id="error-msg" class="text-red-500 text-sm text-center font-bold opacity-0 transition-opacity">No such team in this room!</p>
+    </div>
+</div>
+
+<div id="ready-overlay" class="overlay" style="display: none;">
+    <div id="ready-container" class="text-center">
+        <button id="ready-btn">READY</button>
+        <p id="ready-status" class="mt-8 text-gray-400 font-bold uppercase tracking-widest text-sm">Waiting for opponents...</p>
     </div>
 </div>
 
 <div id="match-hud">
-    <div class="flex flex-col items-center">
-        <div id="display-name-red" class="team-name-display text-red-500">Waiting...</div>
+    <div class="team-box">
+        <div id="display-red" class="team-name text-red-500">Team Red</div>
         <div class="score-dots" id="dots-red"><div class="dot"></div><div class="dot"></div></div>
     </div>
-    <div id="timer-box"><div id="timer-display">03:00</div></div>
-    <div class="flex flex-col items-center">
-        <div id="display-name-blue" class="team-name-display text-blue-500">Waiting...</div>
+    <div id="timer-container">
+        <div id="round-label">Round 1</div>
+        <div id="timer-val">03:00</div>
+    </div>
+    <div class="team-box">
+        <div id="display-blue" class="team-name text-blue-500">Team Blue</div>
         <div class="score-dots" id="dots-blue"><div class="dot"></div><div class="dot"></div></div>
     </div>
 </div>
@@ -68,14 +109,20 @@
 
 <canvas id="stage"></canvas>
 
-<div class="input-panel" id="panel-red">
-    <div id="q-red" class="font-bold mr-4">---</div>
-    <input class="ans-input" id="inp-red" type="text" placeholder="Answer..." autocomplete="off" />
+<div class="ans-panel" id="panel-red">
+    <div class="text-center mr-8">
+        <div class="text-[10px] text-red-400 font-black uppercase">Question</div>
+        <div id="q-red" class="text-2xl font-black">---</div>
+    </div>
+    <input type="text" id="inp-red" class="std-input" placeholder="Type answer..." autocomplete="off" />
 </div>
 
-<div class="input-panel" id="panel-blue">
-    <div id="q-blue" class="font-bold mr-4">---</div>
-    <input class="ans-input" id="inp-blue" type="text" placeholder="Answer..." autocomplete="off" />
+<div class="ans-panel" id="panel-blue">
+    <div class="text-center mr-8">
+        <div class="text-[10px] text-blue-400 font-black uppercase">Question</div>
+        <div id="q-blue" class="text-2xl font-black">---</div>
+    </div>
+    <input type="text" id="inp-blue" class="std-input" placeholder="Type answer..." autocomplete="off" />
 </div>
 
 <script>
@@ -85,71 +132,132 @@ const ctx = canvas.getContext('2d');
 let W, H;
 
 const match = {
-    active: false,
-    timer: 180,
-    currentRound: 1,
-    team1: { name: "Red Team", wins: 0, time: 0 },
-    team2: { name: "Blue Team", wins: 0, time: 0 },
-    ropeX: 0, targetRopeX: 0, winLimit: 250,
-    myTeam: null
+    active: false, timer: 180, currentRound: 1, winLimit: 280,
+    ropeX: 0, targetRopeX: 0,
+    team1: { name: "Red", wins: 0, players: 0 },
+    team2: { name: "Blue", wins: 0, players: 0 },
+    myTeam: null, room: null, playerName: ""
 };
 
-// AUTO-FILL FROM HUB
+const questions = [
+    {q:"15 + 27", a:"42"}, {q:"Capital of Japan?", a:"tokyo"},
+    {q:"Color of Emerald?", a:"green"}, {q:"8 x 9", a:"72"}
+];
+
+// 1. SYSTEM INITIALIZATION
 window.onload = () => {
     const savedID = localStorage.getItem('currentTeamID');
-    if(savedID) document.getElementById('team-id-input').value = savedID;
+    if(savedID) document.getElementById('team-id').value = savedID;
     resize();
-    animate(); // Start the loop immediately so it's not a black screen
+    animate();
 };
 
-document.getElementById('ready-btn').onclick = () => {
-    const name = document.getElementById('player-name-input').value.trim();
-    const tid = document.getElementById('team-id-input').value.trim().toUpperCase();
-    
-    if(!name || !tid) return alert("Please provide both name and ID.");
-    
-    match.myTeam = (Math.random() > 0.5) ? 'red' : 'blue'; // Mock team assignment
-    document.getElementById('setup-overlay').style.display = 'none';
-    
-    // Announce the team names properly
-    document.getElementById('display-name-red').textContent = localStorage.getItem('currentTeamName') || "Team Red";
-    
-    startRound();
+function resize() { W = window.innerWidth; H = window.innerHeight; canvas.width = W; canvas.height = H; }
+window.onresize = resize;
+
+// 2. JOIN & VALIDATION
+document.getElementById('join-btn').onclick = () => {
+    const rid = document.getElementById('room-id').value.trim();
+    const name = document.getElementById('player-name').value.trim();
+    const tid = document.getElementById('team-id').value.trim().toUpperCase();
+
+    if(!rid || !name || !tid) return alert("Fill all fields!");
+
+    socket.emit('join-room', { room: rid, name: name, teamID: tid });
 };
 
-function startRound() {
+socket.on('join-response', (res) => {
+    if(res.success) {
+        match.myTeam = res.assignedSide; // 'red' or 'blue'
+        match.team1.name = res.redTeamName;
+        match.team2.name = res.blueTeamName;
+        
+        document.getElementById('display-red').textContent = match.team1.name;
+        document.getElementById('display-blue').textContent = match.team2.name;
+        document.getElementById('entry-overlay').style.display = 'none';
+        document.getElementById('ready-overlay').style.display = 'flex';
+    } else {
+        const err = document.getElementById('error-msg');
+        err.textContent = res.message;
+        err.style.opacity = 1;
+    }
+});
+
+// 3. READY LOGIC
+document.getElementById('ready-btn').onclick = function() {
+    if(this.classList.contains('waiting')) return;
+    this.textContent = "WAITING...";
+    this.classList.add('waiting');
+    socket.emit('player-ready', { room: match.room });
+};
+
+socket.on('update-lobby', (data) => {
+    const status = document.getElementById('ready-status');
+    if(data.redCount > 0 && data.blueCount > 0) {
+        status.textContent = `${data.readyCount}/${data.totalPlayers} Players Ready`;
+    } else {
+        status.textContent = "Waiting for an opposing team to join...";
+    }
+    match.team1.players = data.redCount;
+    match.team2.players = data.blueCount;
+});
+
+socket.on('start-match', () => {
+    document.getElementById('ready-overlay').style.display = 'none';
     match.active = true;
+    startRound();
+});
+
+// 4. GAMEPLAY LOGIC
+function startRound() {
     match.timer = 180;
     match.ropeX = 0; match.targetRopeX = 0;
-    
     document.getElementById('panel-' + match.myTeam).style.display = 'flex';
     announce(`ROUND ${match.currentRound}`, 2000);
-
+    
     const tick = setInterval(() => {
-        if (!match.active) { clearInterval(tick); return; }
+        if(!match.active) { clearInterval(tick); return; }
         match.timer--;
         updateTimerUI();
-        if (match.timer <= 0) endRound(null);
+        if(match.timer <= 0) endRound(null);
     }, 1000);
+
+    nextQuestion();
 }
 
 function updateTimerUI() {
     const m = Math.floor(match.timer / 60);
     const s = match.timer % 60;
-    document.getElementById('timer-display').textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    document.getElementById('timer-val').textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
 }
 
-function announce(msg, dur) {
-    const el = document.getElementById('announcer');
-    el.textContent = msg; el.style.opacity = 1;
-    setTimeout(() => el.style.opacity = 0, dur);
+function nextQuestion() {
+    match.currentQ = questions[Math.floor(Math.random() * questions.length)];
+    document.getElementById('q-' + match.myTeam).textContent = match.currentQ.q;
+    const inp = document.getElementById('inp-' + match.myTeam);
+    inp.value = ""; inp.focus();
 }
+
+function checkAns() {
+    const inp = document.getElementById('inp-' + match.myTeam);
+    if(inp.value.trim().toLowerCase() === match.currentQ.a.toLowerCase()) {
+        socket.emit('pull', { room: match.room, team: match.myTeam });
+        nextQuestion();
+    } else { inp.value = ""; }
+}
+
+document.getElementById('inp-red').onkeydown = e => { if(e.key==='Enter') checkAns(); };
+document.getElementById('inp-blue').onkeydown = e => { if(e.key==='Enter') checkAns(); };
+
+socket.on('rope-moved', (newX) => {
+    match.targetRopeX = newX;
+    if(Math.abs(newX) >= match.winLimit) endRound(newX < 0 ? 'red' : 'blue');
+});
 
 function endRound(winner) {
     match.active = false;
-    let timeSpent = 180 - match.timer;
-    match.team1.time += timeSpent;
-    match.team2.time += timeSpent;
+    document.getElementById('panel-red').style.display = 'none';
+    document.getElementById('panel-blue').style.display = 'none';
 
     if(winner) {
         match[winner === 'red' ? 'team1' : 'team2'].wins++;
@@ -158,55 +266,67 @@ function endRound(winner) {
     }
 
     setTimeout(() => {
-        if(match.team1.wins === 2 || match.team2.wins === 2) {
-            announce("MATCH OVER!", 5000);
+        if(match.team1.wins >= 2 || match.team2.wins >= 2) {
+            announce("MATCH OVER", 5000);
+            setTimeout(() => location.reload(), 6000);
         } else {
             match.currentRound++;
+            document.getElementById('round-label').textContent = `Round ${match.currentRound}`;
             startRound();
         }
-    }, 2500);
+    }, 3000);
 }
 
-function updateDots(team) {
-    const dots = document.getElementById(`dots-${team}`).children;
-    const wins = team === 'red' ? match.team1.wins : match.team2.wins;
-    for(let i=0; i<wins; i++) dots[i].classList.add('active', team);
+function updateDots(side) {
+    const dots = document.getElementById(`dots-${side}`).children;
+    const count = match[side === 'red' ? 'team1' : 'team2'].wins;
+    for(let i=0; i<count; i++) dots[i].classList.add('active', side);
 }
 
-function resize() { W = window.innerWidth; H = window.innerHeight; canvas.width = W; canvas.height = H; }
-window.onresize = resize;
+function announce(msg, dur) {
+    const el = document.getElementById('announcer');
+    el.textContent = msg; el.style.opacity = 1;
+    setTimeout(() => el.style.opacity = 0, dur);
+}
+
+// 5. RENDERING ENGINE
+function drawPlayer(cy, x, color, index) {
+    const r = 25, bh = 50;
+    const isTop = index % 2 === 0;
+    const y = isTop ? cy - (r + bh + 5) : cy + 5;
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.roundRect(x - r, y, r * 2, bh, [10]); ctx.fill();
+    ctx.fillStyle = "#E1AD01"; // Head
+    ctx.beginPath(); ctx.arc(x, isTop ? y : y + bh, r, Math.PI, 0); ctx.fill();
+}
 
 function animate() {
     ctx.clearRect(0, 0, W, H);
     const cx = W/2, cy = H/2;
-    
     match.ropeX += (match.targetRopeX - match.ropeX) * 0.1;
     const rx = cx + match.ropeX;
 
-    // Draw Rope
-    ctx.strokeStyle = "#8B4513"; ctx.lineWidth = 10;
-    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
-    
-    // Center Marker
-    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(rx, cy, 12, 0, Math.PI*2); ctx.fill();
+    // Background Grid
+    ctx.strokeStyle = "rgba(255,255,255,0.03)";
+    for(let i=0; i<W; i+=50) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.stroke(); }
 
     // Goal Lines
-    ctx.setLineDash([10, 10]);
-    ctx.strokeStyle = "rgba(239,68,68,0.5)"; ctx.strokeRect(cx - match.winLimit, cy-100, 2, 200);
-    ctx.strokeStyle = "rgba(59,130,246,0.5)"; ctx.strokeRect(cx + match.winLimit, cy-100, 2, 200);
+    ctx.lineWidth = 4; ctx.setLineDash([10, 10]);
+    ctx.strokeStyle = "rgba(239, 68, 68, 0.3)"; ctx.strokeRect(cx - match.winLimit, cy-120, 2, 240);
+    ctx.strokeStyle = "rgba(59, 130, 246, 0.3)"; ctx.strokeRect(cx + match.winLimit, cy-120, 2, 240);
     ctx.setLineDash([]);
 
-    requestAnimationFrame(animate);
-}
+    // Rope
+    ctx.strokeStyle = "#8B4513"; ctx.lineWidth = 10;
+    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(rx, cy, 10, 0, Math.PI*2); ctx.fill();
 
-// Logic for pulling (mocking movement)
-window.onkeydown = (e) => {
-    if(!match.active) return;
-    if(e.key === 'Enter') {
-        const move = match.myTeam === 'red' ? -20 : 20;
-        match.targetRopeX += move;
-        if(Math.abs(match.targetRopeX) >= match.winLimit) endRound(match.targetRopeX < 0 ? 'red' : 'blue');
-    }
+    // Players
+    const spacing = 70;
+    for(let i=0; i<match.team1.players; i++) drawPlayer(cy, rx - 100 - (i*spacing), "#ef4444", i);
+    for(let i=0; i<match.team2.players; i++) drawPlayer(cy, rx + 100 + (i*spacing), "#3b82f6", i);
+
+    requestAnimationFrame(animate);
 }
 </script>
 </body>
