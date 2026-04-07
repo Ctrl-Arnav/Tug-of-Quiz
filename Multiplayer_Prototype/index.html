@@ -11,121 +11,74 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Inter', sans-serif; background: #0a1628; overflow: hidden; color: white; }
         
+        /* HUD Styles */
         #match-hud {
             position: absolute; top: 0; width: 100%; height: 100px;
             display: flex; justify-content: space-between; align-items: center;
             padding: 0 40px; background: linear-gradient(to bottom, rgba(10,22,40,0.9), transparent);
             z-index: 20;
         }
-
-        .team-score-card {
-            display: flex; flex-direction: column; align-items: center; min-width: 200px;
-        }
-        .team-name-display { font-size: 1.5rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+        .team-name-display { font-size: 1.5rem; font-weight: 900; text-transform: uppercase; }
         .score-dots { display: flex; gap: 8px; margin-top: 4px; }
-        .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); }
+        .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); }
         .dot.active.red { background: #ef4444; border-color: #ef4444; box-shadow: 0 0 10px #ef4444; }
         .dot.active.blue { background: #3b82f6; border-color: #3b82f6; box-shadow: 0 0 10px #3b82f6; }
 
-        #timer-box {
-            background: rgba(0,0,0,0.6); border: 2px solid rgba(255,255,255,0.1);
-            padding: 10px 25px; border-radius: 15px; text-align: center;
-        }
+        #timer-box { background: rgba(0,0,0,0.6); padding: 10px 25px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
         #timer-display { font-family: monospace; font-size: 2.5rem; font-weight: bold; }
-        #round-label { font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 2px; }
 
+        /* Input Panels */
         .input-panel {
             position: absolute; width: 100%; height: 120px; 
             display: none; align-items: center; justify-content: center; 
-            padding: 0 40px; z-index: 10; gap: 20px;
-            background: rgba(10, 18, 40, 0.85); backdrop-filter: blur(5px);
+            z-index: 10; gap: 20px; background: rgba(10, 18, 40, 0.9);
         }
-        #panel-red { top: 100px; border-bottom: 2px solid rgba(239,68,68,0.2); }
-        #panel-blue { bottom: 0; border-top: 2px solid rgba(59,130,246,0.2); }
+        #panel-red { top: 100px; border-bottom: 2px solid #ef4444; }
+        #panel-blue { bottom: 0; border-top: 2px solid #3b82f6; }
+        .ans-input { width: 300px; padding: 12px; border-radius: 8px; background: #1a2638; color: white; border: 1px solid #334155; text-align: center; font-size: 1.2rem; outline: none; }
 
-        .ans-input {
-            width: 350px; border: 2px solid rgba(255,255,255,0.1); border-radius: 12px;
-            padding: 15px; font-size: 20px; text-align: center; background: rgba(255,255,255,0.05);
-            color: white; outline: none; transition: all 0.2s;
-        }
-        .ans-input:focus { border-color: white; background: rgba(255,255,255,0.1); }
-
-        #announcer-overlay {
-            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-            z-index: 50; pointer-events: none; background: rgba(0,0,0,0.4);
-            opacity: 0; transition: opacity 0.3s;
-        }
-        #announcer-text { font-size: 5rem; font-weight: 900; text-transform: uppercase; font-style: italic; text-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-
-        #setup-overlay {
-            position: absolute; inset: 0; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 100;
-            background: #0a1628;
-        }
+        #setup-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; background: #0a1628; }
+        #announcer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 50; pointer-events: none; opacity: 0; transition: opacity 0.3s; font-size: 5rem; font-weight: 900; font-style: italic; }
     </style>
 </head>
 <body>
 
 <div id="setup-overlay">
-    <h1 class="text-4xl font-black mb-6 text-blue-400">JOIN MATCH</h1>
+    <h1 class="text-4xl font-black mb-6 text-blue-400">MATCH SETUP</h1>
     <div class="flex flex-col gap-4 w-80">
-        <input type="text" id="player-name-input" class="bg-gray-800 p-4 rounded-lg outline-none border border-gray-700" placeholder="Your Name">
-        <input type="text" id="team-id-input" class="bg-gray-800 p-4 rounded-lg outline-none border border-gray-700" placeholder="Unique Team ID">
-        <button id="ready-btn" class="bg-blue-600 p-4 rounded-lg font-bold hover:bg-blue-500 transition">READY TO PULL</button>
+        <input type="text" id="player-name-input" class="bg-gray-800 p-4 rounded-lg outline-none border border-gray-700" placeholder="Display Name">
+        <input type="text" id="team-id-input" class="bg-gray-800 p-4 rounded-lg outline-none border border-gray-700" placeholder="Team ID (from Hub)">
+        <button id="ready-btn" class="bg-blue-600 p-4 rounded-lg font-bold hover:bg-blue-500 transition">JOIN ARENA</button>
     </div>
 </div>
 
 <div id="match-hud">
-    <div class="team-score-card">
-        <div id="display-name-red" class="team-name-display text-red-500">Team Red</div>
-        <div class="score-dots" id="dots-red">
-            <div class="dot"></div>
-            <div class="dot"></div>
-        </div>
+    <div class="flex flex-col items-center">
+        <div id="display-name-red" class="team-name-display text-red-500">Waiting...</div>
+        <div class="score-dots" id="dots-red"><div class="dot"></div><div class="dot"></div></div>
     </div>
-    
-    <div id="timer-box">
-        <div id="round-label">Round 1</div>
-        <div id="timer-display">03:00</div>
-    </div>
-
-    <div class="team-score-card">
-        <div id="display-name-blue" class="team-name-display text-blue-500">Team Blue</div>
-        <div class="score-dots" id="dots-blue">
-            <div class="dot"></div>
-            <div class="dot"></div>
-        </div>
+    <div id="timer-box"><div id="timer-display">03:00</div></div>
+    <div class="flex flex-col items-center">
+        <div id="display-name-blue" class="team-name-display text-blue-500">Waiting...</div>
+        <div class="score-dots" id="dots-blue"><div class="dot"></div><div class="dot"></div></div>
     </div>
 </div>
 
-<div id="announcer-overlay">
-    <div id="announcer-text">ROUND 1</div>
+<div id="announcer">ROUND 1</div>
+
+<canvas id="stage"></canvas>
+
+<div class="input-panel" id="panel-red">
+    <div id="q-red" class="font-bold mr-4">---</div>
+    <input class="ans-input" id="inp-red" type="text" placeholder="Answer..." autocomplete="off" />
 </div>
 
-<div id="root">
-    <canvas id="stage"></canvas>
-
-    <div class="input-panel" id="panel-red">
-        <div class="flex flex-col items-center mr-6">
-            <div class="text-xs text-red-400 uppercase font-bold">Question</div>
-            <div class="text-xl font-bold" id="q-red">---</div>
-        </div>
-        <input class="ans-input" id="inp-red" type="text" placeholder="Type answer..." autocomplete="off" />
-    </div>
-
-    <div class="input-panel" id="panel-blue">
-        <div class="flex flex-col items-center mr-6">
-            <div class="text-xs text-blue-400 uppercase font-bold">Question</div>
-            <div class="text-xl font-bold" id="q-blue">---</div>
-        </div>
-        <input class="ans-input" id="inp-blue" type="text" placeholder="Type answer..." autocomplete="off" />
-    </div>
+<div class="input-panel" id="panel-blue">
+    <div id="q-blue" class="font-bold mr-4">---</div>
+    <input class="ans-input" id="inp-blue" type="text" placeholder="Answer..." autocomplete="off" />
 </div>
 
 <script>
-// NOTE: Logic for team registry and matching would be handled by the server.
-// This client code manages the local state and round timers.
-
 const socket = io("https://Aloharean-Tug-Of-Quiz.hf.space");
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
@@ -135,109 +88,78 @@ const match = {
     active: false,
     timer: 180,
     currentRound: 1,
-    team1: { name: "Red Team", wins: 0, timeInRound: 0 },
-    team2: { name: "Blue Team", wins: 0, timeInRound: 0 },
-    ropeX: 0,
-    targetRopeX: 0,
-    winLimit: 250,
-    myTeam: null,
-    playerName: "",
-    teamID: ""
+    team1: { name: "Red Team", wins: 0, time: 0 },
+    team2: { name: "Blue Team", wins: 0, time: 0 },
+    ropeX: 0, targetRopeX: 0, winLimit: 250,
+    myTeam: null
 };
 
-const questions = [
-    {q:"12 + 15",a:"27"},{q:"Capital of France?",a:"paris"},{q:"8 x 7",a:"56"},
-    {q:"Square root of 81?",a:"9"},{q:"Color of a banana?",a:"yellow"}
-];
+// AUTO-FILL FROM HUB
+window.onload = () => {
+    const savedID = localStorage.getItem('currentTeamID');
+    if(savedID) document.getElementById('team-id-input').value = savedID;
+    resize();
+    animate(); // Start the loop immediately so it's not a black screen
+};
 
 document.getElementById('ready-btn').onclick = () => {
     const name = document.getElementById('player-name-input').value.trim();
-    const tid = document.getElementById('team-id-input').value.trim();
+    const tid = document.getElementById('team-id-input').value.trim().toUpperCase();
     
-    if(!name || !tid) return;
+    if(!name || !tid) return alert("Please provide both name and ID.");
     
-    match.playerName = name;
-    match.teamID = tid;
-    
-    // In a real scenario, socket would fetch the Team Name associated with tid here
-    socket.emit('join-match', { playerName: name, teamID: tid });
+    match.myTeam = (Math.random() > 0.5) ? 'red' : 'blue'; // Mock team assignment
     document.getElementById('setup-overlay').style.display = 'none';
-};
-
-socket.on('match-start', (data) => {
-    match.myTeam = data.assignedTeam; // 'red' or 'blue'
-    match.team1.name = data.redTeamName;
-    match.team2.name = data.blueTeamName;
     
-    document.getElementById('display-name-red').textContent = match.team1.name;
-    document.getElementById('display-name-blue').textContent = match.team2.name;
+    // Announce the team names properly
+    document.getElementById('display-name-red').textContent = localStorage.getItem('currentTeamName') || "Team Red";
     
     startRound();
-});
+};
 
 function startRound() {
     match.active = true;
     match.timer = 180;
-    match.ropeX = 0;
-    match.targetRopeX = 0;
+    match.ropeX = 0; match.targetRopeX = 0;
     
-    announce(`ROUND ${match.currentRound}`, 2000);
-    document.getElementById('round-label').textContent = `Round ${match.currentRound}`;
     document.getElementById('panel-' + match.myTeam).style.display = 'flex';
-    
-    nextQuestion();
-    resize();
-    animate();
-    
+    announce(`ROUND ${match.currentRound}`, 2000);
+
     const tick = setInterval(() => {
         if (!match.active) { clearInterval(tick); return; }
         match.timer--;
         updateTimerUI();
-        if (match.timer <= 0) {
-            clearInterval(tick);
-            endRound(null); // Timeout Draw
-        }
+        if (match.timer <= 0) endRound(null);
     }, 1000);
 }
 
 function updateTimerUI() {
     const m = Math.floor(match.timer / 60);
     const s = match.timer % 60;
-    document.getElementById('timer-display').textContent = 
-        `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    document.getElementById('timer-display').textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
 }
 
 function announce(msg, dur) {
-    const overlay = document.getElementById('announcer-overlay');
-    const text = document.getElementById('announcer-text');
-    text.textContent = msg;
-    overlay.style.opacity = 1;
-    setTimeout(() => { overlay.style.opacity = 0; }, dur);
+    const el = document.getElementById('announcer');
+    el.textContent = msg; el.style.opacity = 1;
+    setTimeout(() => el.style.opacity = 0, dur);
 }
 
 function endRound(winner) {
     match.active = false;
-    const timeSpent = 180 - match.timer;
-    match.team1.timeInRound += timeSpent;
-    match.team2.timeInRound += timeSpent;
+    let timeSpent = 180 - match.timer;
+    match.team1.time += timeSpent;
+    match.team2.time += timeSpent;
 
-    if (winner === 'red') {
-        match.team1.wins++;
-        updateScoreDots('red');
-        announce(`${match.team1.name} WINS ROUND!`, 2000);
-    } else if (winner === 'blue') {
-        match.team2.wins++;
-        updateScoreDots('blue');
-        announce(`${match.team2.name} WINS ROUND!`, 2000);
-    } else {
-        announce("DRAW!", 2000);
+    if(winner) {
+        match[winner === 'red' ? 'team1' : 'team2'].wins++;
+        updateDots(winner);
+        announce(`${winner.toUpperCase()} WINS ROUND!`, 2000);
     }
 
     setTimeout(() => {
-        if (match.team1.wins >= 2 || match.team2.wins >= 2) {
-            const final = match.team1.wins >= 2 ? match.team1.name : match.team2.name;
-            announce(`${final} WINS MATCH!`, 5000);
-            // Send final stats (timeSpent, wins) to leaderboard
+        if(match.team1.wins === 2 || match.team2.wins === 2) {
+            announce("MATCH OVER!", 5000);
         } else {
             match.currentRound++;
             startRound();
@@ -245,80 +167,47 @@ function endRound(winner) {
     }, 2500);
 }
 
-function updateScoreDots(team) {
+function updateDots(team) {
     const dots = document.getElementById(`dots-${team}`).children;
     const wins = team === 'red' ? match.team1.wins : match.team2.wins;
-    for(let i=0; i<wins; i++) {
-        dots[i].classList.add('active', team);
-    }
+    for(let i=0; i<wins; i++) dots[i].classList.add('active', team);
 }
 
-// Reuse drawing and basic logic from previous prototype
 function resize() { W = window.innerWidth; H = window.innerHeight; canvas.width = W; canvas.height = H; }
-window.onresize = resize; resize();
-
-function drawPlayer(cy, x, color, index) {
-    const r = 25, bh = 50;
-    const isTop = index % 2 === 0;
-    const y = isTop ? cy - (r + bh + 5) : cy + 5;
-    ctx.fillStyle = color;
-    ctx.beginPath(); ctx.roundRect(x - r, y, r * 2, bh, [10]); ctx.fill();
-    ctx.fillStyle = "#E1AD01";
-    ctx.beginPath(); ctx.arc(x, isTop ? y : y + bh, r, Math.PI, 0); ctx.fill();
-}
+window.onresize = resize;
 
 function animate() {
-    if (!match.active && match.timer <= 0) return;
-    match.ropeX += (match.targetRopeX - match.ropeX) * 0.1;
     ctx.clearRect(0, 0, W, H);
-    const cx = W/2, cy = H/2, rx = cx + match.ropeX;
+    const cx = W/2, cy = H/2;
+    
+    match.ropeX += (match.targetRopeX - match.ropeX) * 0.1;
+    const rx = cx + match.ropeX;
 
-    // Goals
-    ctx.lineWidth = 4; ctx.setLineDash([10, 10]);
-    ctx.strokeStyle = "rgba(239,68,68,0.4)"; ctx.beginPath(); ctx.moveTo(cx - match.winLimit, cy-100); ctx.lineTo(cx - match.winLimit, cy+100); ctx.stroke();
-    ctx.strokeStyle = "rgba(59,130,246,0.4)"; ctx.beginPath(); ctx.moveTo(cx + match.winLimit, cy-100); ctx.lineTo(cx + match.winLimit, cy+100); ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Rope
-    ctx.strokeStyle = "#8B4513"; ctx.lineWidth = 8;
+    // Draw Rope
+    ctx.strokeStyle = "#8B4513"; ctx.lineWidth = 10;
     ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
     
-    // Rope center marker
-    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(rx, cy, 10, 0, Math.PI*2); ctx.fill();
+    // Center Marker
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(rx, cy, 12, 0, Math.PI*2); ctx.fill();
 
-    // Mock player drawing (would be based on socket data)
-    drawPlayer(cy, rx - 100, "#ef4444", 0);
-    drawPlayer(cy, rx + 100, "#3b82f6", 1);
+    // Goal Lines
+    ctx.setLineDash([10, 10]);
+    ctx.strokeStyle = "rgba(239,68,68,0.5)"; ctx.strokeRect(cx - match.winLimit, cy-100, 2, 200);
+    ctx.strokeStyle = "rgba(59,130,246,0.5)"; ctx.strokeRect(cx + match.winLimit, cy-100, 2, 200);
+    ctx.setLineDash([]);
 
-    if (match.active) requestAnimationFrame(animate);
+    requestAnimationFrame(animate);
 }
 
-function nextQuestion() {
-    const q = questions[Math.floor(Math.random() * questions.length)];
-    match.currentQ = q;
-    document.getElementById('q-' + match.myTeam).textContent = q.q;
-    const inp = document.getElementById('inp-' + match.myTeam);
-    inp.value = ""; inp.focus();
-}
-
-function checkAns() {
-    const inp = document.getElementById('inp-' + match.myTeam);
-    if (inp.value.trim().toLowerCase() === match.currentQ.a.toLowerCase()) {
-        socket.emit('pull', { team: match.myTeam });
-        nextQuestion();
-    } else { inp.value = ""; }
-}
-
-document.getElementById('inp-red').onkeydown = e => { if(e.key==='Enter') checkAns(); };
-document.getElementById('inp-blue').onkeydown = e => { if(e.key==='Enter') checkAns(); };
-
-// Mock trigger for testing rope movement and win
-socket.on('rope-moved', (newX) => {
-    match.targetRopeX = newX;
-    if (Math.abs(newX) >= match.winLimit) {
-        endRound(newX < 0 ? 'red' : 'blue');
+// Logic for pulling (mocking movement)
+window.onkeydown = (e) => {
+    if(!match.active) return;
+    if(e.key === 'Enter') {
+        const move = match.myTeam === 'red' ? -20 : 20;
+        match.targetRopeX += move;
+        if(Math.abs(match.targetRopeX) >= match.winLimit) endRound(match.targetRopeX < 0 ? 'red' : 'blue');
     }
-});
+}
 </script>
 </body>
 </html>
