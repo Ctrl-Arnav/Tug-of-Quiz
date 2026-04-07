@@ -1,229 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="icon" href="https://fav.farm/🪢" />
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tug Of Quiz - Arena</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: sans-serif; background: #0a1628; overflow: hidden; color: white; }
-        #root { display: flex; height: 100vh; width: 100vw; flex-direction: column; position: relative; }
-        
-        .panel {
-            position: absolute; width: 100%; height: 130px; 
-            display: none; flex-direction: row; align-items: center; 
-            justify-content: center; padding: 0 40px; z-index: 10; gap: 20px;
-            background: rgba(10, 18, 40, 0.9);
-        }
-        #panel-red { top: 0; border-bottom: 2px solid rgba(239,68,68,0.3); }
-        #panel-blue { bottom: 0; border-top: 2px solid rgba(59,130,246,0.3); }
-
-        .ans-input {
-            width: 280px; border: 2px solid rgba(255,255,255,0.1); border-radius: 12px;
-            padding: 12px; font-size: 18px; text-align: center; background: rgba(255,255,255,0.05);
-            color: white; outline: none; transition: all 0.2s;
-        }
-        .ans-input.red:focus { border-color: #ef4444; background: rgba(239,68,68,0.05); }
-        .ans-input.blue:focus { border-color: #3b82f6; background: rgba(59,130,246,0.05); }
-
-        #room-overlay, #team-overlay, #ready-screen, #win-overlay {
-            position: absolute; inset: 0; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 40;
-            background: rgba(10,18,40,0.98);
-        }
-        .std-input { 
-            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); 
-            padding: 12px; border-radius: 8px; margin-bottom: 16px; text-align: center; 
-            font-size: 18px; color: white; outline: none; width: 280px;
-        }
+        .panel { position: absolute; width: 100%; height: 130px; display: none; align-items: center; justify-content: center; z-index: 10; background: rgba(10, 18, 40, 0.9); }
+        #panel-red { top: 0; border-bottom: 2px solid #ef4444; }
+        #panel-blue { bottom: 0; border-top: 2px solid #3b82f6; }
+        .ans-input { width: 280px; padding: 12px; border-radius: 12px; text-align: center; background: rgba(255,255,255,0.1); color: white; border: 2px solid rgba(255,255,255,0.2); outline: none; }
     </style>
 </head>
 <body>
-
-<div id="root">
     <canvas id="stage"></canvas>
 
-    <div class="panel" id="panel-red">
-        <div class="text-center mr-4">
-            <div id="name-red" class="bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-[10px] uppercase font-bold mb-1">Red Team</div>
-            <div class="q-text font-bold text-lg" id="q-red">---</div>
-        </div>
-        <input class="ans-input red" id="inp-red" type="text" placeholder="Answer..." autocomplete="off" />
+    <div id="panel-red" class="panel">
+        <div class="text-center mr-4"><div id="name-red" class="text-red-400 font-bold uppercase text-xs">Waiting...</div><div id="q-red" class="text-xl font-bold">---</div></div>
+        <input type="text" id="inp-red" class="ans-input" placeholder="Answer..." />
     </div>
 
-    <div class="panel" id="panel-blue">
-        <div class="text-center mr-4">
-            <div id="name-blue" class="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-[10px] uppercase font-bold mb-1">Blue Team</div>
-            <div class="q-text font-bold text-lg" id="q-blue">---</div>
-        </div>
-        <input class="ans-input blue" id="inp-blue" type="text" placeholder="Answer..." autocomplete="off" />
+    <div id="panel-blue" class="panel">
+        <div class="text-center mr-4"><div id="name-blue" class="text-blue-400 font-bold uppercase text-xs">Waiting...</div><div id="q-blue" class="text-xl font-bold">---</div></div>
+        <input type="text" id="inp-blue" class="ans-input" placeholder="Answer..." />
     </div>
 
-    <div id="room-overlay">
-        <h1 class="text-5xl font-black text-blue-400 mb-2 italic uppercase">ARENA</h1>
-        <p class="text-gray-400 mb-8 uppercase text-xs tracking-widest">Step 1: Join a Room</p>
-        <input type="text" id="room-input" class="std-input" placeholder="Enter Room ID">
-        <button class="bg-blue-600 px-12 py-4 rounded-xl font-bold uppercase hover:bg-blue-700 transition" onclick="nextStep()">
-            Continue
-        </button>
+    <div id="entry-overlay" class="absolute inset-0 bg-[#0a1628] flex flex-col items-center justify-center z-50">
+        <h1 class="text-4xl font-black text-blue-400 mb-6 italic">ARENA</h1>
+        <input type="text" id="r-in" class="p-3 bg-gray-800 rounded mb-2 w-64" placeholder="Room ID">
+        <input type="text" id="t-in" class="p-3 bg-gray-800 rounded mb-4 w-64" placeholder="Team ID">
+        <button onclick="join()" class="bg-blue-600 px-10 py-3 rounded font-bold">START</button>
     </div>
 
-    <div id="team-overlay" style="display:none;">
-        <h1 class="text-3xl font-black text-white mb-2 italic uppercase">SELECT TEAM</h1>
-        <p class="text-gray-400 mb-8 uppercase text-xs tracking-widest">Step 2: Enter Team ID from Hub</p>
-        <input type="text" id="team-id-input" class="std-input" placeholder="Unique Team ID">
-        <button class="bg-white text-black px-12 py-4 rounded-xl font-bold uppercase hover:bg-gray-200 transition" onclick="joinTeam()">
-            Join Team
-        </button>
-        <p id="error-msg" class="mt-4 text-red-500 font-bold text-sm"></p>
-    </div>
+    <script>
+        const socket = io("https://Aloharean-Tug-Of-Quiz.hf.space");
+        const canvas = document.getElementById('stage');
+        const ctx = canvas.getContext('2d');
+        let W, H, mySide, curQ;
+        const game = { active: false, ropeX: 0, targetRopeX: 0, redC: 0, blueC: 0 };
 
-    <div id="ready-screen" style="display:none;">
-        <h2 class="text-3xl font-black mb-6 italic">TEAM JOINED</h2>
-        <button id="ready-btn" onclick="sendReady()" class="bg-green-600 px-16 py-6 rounded-full text-4xl font-black hover:bg-green-500 transition">
-            READY
-        </button>
-        <p id="ready-status" class="mt-4 text-gray-500 uppercase text-xs">Waiting for opponents...</p>
-    </div>
-
-    <div id="win-overlay" style="display:none;">
-        <h2 class="text-6xl font-black mb-4 italic" id="win-title"></h2>
-        <button class="bg-white text-black px-12 py-4 rounded-full font-bold text-xl hover:bg-gray-200 transition" onclick="location.reload()">PLAY AGAIN</button>
-    </div>
-</div>
-
-<script>
-    const socket = io("https://Aloharean-Tug-Of-Quiz.hf.space");
-    const canvas = document.getElementById('stage');
-    const ctx = canvas.getContext('2d');
-    let W, H, mySide;
-
-    const game = { active: false, ropeX: 0, targetRopeX: 0, winLimit: 250, room: null, redCount: 0, blueCount: 0, currentQ: null };
-
-    // STEP 1 Logic
-    function nextStep() {
-        const r = document.getElementById('room-input').value.trim();
-        if(!r) return;
-        game.room = r;
-        document.getElementById('room-overlay').style.display = 'none';
-        document.getElementById('team-overlay').style.display = 'flex';
-    }
-
-    // STEP 2 Logic
-    function joinTeam() {
-        const tid = document.getElementById('team-id-input').value.trim().toUpperCase();
-        if(!tid) return;
-        socket.emit("join-attempt", { room: game.room, teamID: tid });
-    }
-
-    socket.on("join-response", (res) => {
-        if(!res.success) {
-            document.getElementById('error-msg').innerText = res.message;
-            return;
+        function join() {
+            socket.emit("join-attempt", { room: document.getElementById('r-in').value, teamID: document.getElementById('t-in').value.toUpperCase() });
         }
-        mySide = res.side;
-        document.getElementById('name-red').innerText = res.redName;
-        document.getElementById('name-blue').innerText = res.blueName;
-        document.getElementById('team-overlay').style.display = 'none';
-        document.getElementById('ready-screen').style.display = 'flex';
-    });
 
-    function sendReady() {
-        socket.emit("player-ready", { room: game.room });
-        const btn = document.getElementById('ready-btn');
-        btn.innerText = "WAITING...";
-        btn.disabled = true;
-        btn.classList.replace('bg-green-600', 'bg-gray-600');
-    }
+        socket.on("join-response", res => {
+            if(!res.success) return alert(res.message);
+            mySide = res.side;
+            document.getElementById('name-red').innerText = res.redName;
+            document.getElementById('name-blue').innerText = res.blueName;
+            document.getElementById('entry-overlay').style.display = 'none';
+        });
 
-    socket.on("lobby-update", (data) => {
-        game.redCount = data.redCount;
-        game.blueCount = data.blueCount;
-    });
+        socket.on("start-match", data => {
+            game.active = true;
+            game.redC = data.redCount; game.blueC = data.blueCount;
+            curQ = data.question;
+            document.getElementById('panel-' + mySide).style.display = 'flex';
+            document.getElementById('q-' + mySide).innerText = curQ.q;
+            resize(); animate();
+        });
 
-    socket.on("start-match", (data) => {
-        document.getElementById('ready-screen').style.display = 'none';
-        document.getElementById('panel-' + mySide).style.display = 'flex';
-        game.active = true;
-        updateQuestion(data.question);
-        resize(); animate();
-    });
+        socket.on("rope-moved", data => { game.targetRopeX = data.ropeX; });
 
-    socket.on("rope-moved", (data) => {
-        game.targetRopeX = data.ropeX;
-    });
+        socket.on("round-end", data => {
+            alert(data.winner.toUpperCase() + " WINS ROUND!");
+            game.ropeX = 0; game.targetRopeX = 0;
+        });
 
-    socket.on("round-end", (data) => {
-        game.active = false;
-        const winTitle = document.getElementById('win-title');
-        document.getElementById('win-overlay').style.display = 'flex';
-        winTitle.innerText = data.winner.toUpperCase() + " WINS!";
-        winTitle.style.color = data.winner === 'red' ? '#ef4444' : '#3b82f6';
-    });
-
-    function updateQuestion(qObj) {
-        game.currentQ = qObj;
-        document.getElementById('q-' + mySide).textContent = qObj.q;
-        const inp = document.getElementById('inp-' + mySide);
-        inp.value = ""; inp.focus();
-    }
-
-    function checkAns() {
-        const inp = document.getElementById('inp-' + mySide);
-        if (inp.value.trim().toLowerCase() === game.currentQ.a.toLowerCase()) {
-            socket.emit('pull', { room: game.room, team: mySide });
-        } else {
-            inp.value = "";
+        function check() {
+            const inp = document.getElementById('inp-' + mySide);
+            // Fix: Normalize both values to strings to allow numeric answers
+            if (inp.value.toString().trim().toLowerCase() === curQ.a.toString().toLowerCase()) {
+                socket.emit("pull", { room: document.getElementById('r-in').value, team: mySide });
+                inp.value = "";
+            } else { inp.value = ""; }
         }
-    }
 
-    // --- STABLE RENDER ENGINE ---
-    function resize() { W = window.innerWidth; H = window.innerHeight; canvas.width = W; canvas.height = H; }
-    window.onresize = resize;
+        function resize() { W = window.innerWidth; H = window.innerHeight; canvas.width = W; canvas.height = H; }
+        window.onresize = resize;
 
-    function drawPlayer(cy, x, color, index) {
-        const r = 25, bh = 50;
-        const isTop = index % 2 === 0;
-        const y = isTop ? cy - (r + bh + 5) : cy + 5;
-        ctx.fillStyle = color;
-        ctx.beginPath(); ctx.roundRect(x - r, y, r * 2, bh, [10]); ctx.fill();
-        ctx.fillStyle = "#E1AD01";
-        ctx.beginPath(); ctx.arc(x, isTop ? y : y + bh, r, Math.PI, 0); ctx.fill();
-    }
+        function animate() {
+            if (!game.active) return;
+            game.ropeX += (game.targetRopeX - game.ropeX) * 0.1;
+            ctx.clearRect(0, 0, W, H);
+            const cx = W/2, cy = H/2, rx = cx + game.ropeX;
+            ctx.strokeStyle = "#8B4513"; ctx.lineWidth = 10;
+            ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+            ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(rx, cy, 10, 0, Math.PI*2); ctx.fill();
+            
+            const drawP = (x, color) => {
+                ctx.fillStyle = color; ctx.fillRect(x - 20, cy - 60, 40, 50);
+                ctx.fillStyle = "#E1AD01"; ctx.beginPath(); ctx.arc(x, cy - 60, 20, Math.PI, 0); ctx.fill();
+            };
+            if(game.redC) drawP(rx - 80, "#ef4444");
+            if(game.blueC) drawP(rx + 80, "#3b82f6");
+            requestAnimationFrame(animate);
+        }
 
-    function animate() {
-        if (!game.active) return;
-        game.ropeX += (game.targetRopeX - game.ropeX) * 0.1;
-        ctx.clearRect(0, 0, W, H);
-        const cx = W/2, cy = H/2, rx = cx + game.ropeX;
-
-        // Grid
-        ctx.strokeStyle = "rgba(255,255,255,0.03)";
-        for(let i=0; i<W; i+=50) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.stroke(); }
-
-        // Goals
-        ctx.lineWidth = 4; ctx.setLineDash([10, 10]);
-        ctx.strokeStyle = "rgba(239, 68, 68, 0.3)"; ctx.strokeRect(cx - game.winLimit, cy - 120, 2, 240);
-        ctx.strokeStyle = "rgba(59, 130, 246, 0.3)"; ctx.strokeRect(cx + game.winLimit, cy - 120, 2, 240);
-        ctx.setLineDash([]);
-
-        // Rope
-        ctx.strokeStyle = "#8B4513"; ctx.lineWidth = 10;
-        ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
-        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(rx, cy, 10, 0, Math.PI*2); ctx.fill();
-
-        // Players
-        for(let i=0; i<game.redCount; i++) drawPlayer(cy, rx - 100 - (i*70), "#ef4444", i);
-        for(let i=0; i<game.blueCount; i++) drawPlayer(cy, rx + 100 + (i*70), "#3b82f6", i);
-
-        requestAnimationFrame(animate);
-    }
-
-    document.getElementById('inp-red').onkeydown = e => { if(e.key==='Enter') checkAns(); };
-    document.getElementById('inp-blue').onkeydown = e => { if(e.key==='Enter') checkAns(); };
-</script>
+        document.getElementById('inp-red').onkeydown = e => { if(e.key==='Enter') check(); };
+        document.getElementById('inp-blue').onkeydown = e => { if(e.key==='Enter') check(); };
+    </script>
 </body>
 </html>
