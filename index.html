@@ -2,73 +2,42 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <link rel="icon" href="https://fav.farm/🪢" />
     <title>Tug of War - Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
-<body class="bg-[#0a1628] text-white flex flex-col items-center p-12 min-h-screen">
-    <h1 class="text-6xl font-black mb-4 text-blue-400 italic uppercase">TUG OF WAR</h1>
-    <p class="text-gray-400 mb-10 text-center">Register your team globally and join the arena.</p>
+<body class="bg-[#0a1628] text-white p-10">
+    <h1 class="text-4xl font-black text-center text-blue-400 mb-10 italic">TUG OF WAR HUB</h1>
     
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-10 w-full max-w-5xl">
-        <div class="bg-gray-800 p-8 rounded-2xl border border-gray-700 shadow-xl">
-            <h2 class="text-2xl font-bold mb-6 text-blue-300">Create New Team</h2>
-            <input type="text" id="team-name" class="w-full p-4 bg-gray-900 rounded-lg mb-4 border border-gray-600 outline-none focus:border-blue-500" placeholder="Enter Team Name">
-            <button onclick="createTeam()" class="w-full bg-blue-600 p-4 rounded-lg font-black hover:bg-blue-500 transition uppercase tracking-widest">Register Team</button>
-            
-            <div id="id-display-box" class="mt-8 p-6 bg-black/40 rounded-xl hidden border border-dashed border-blue-500/50">
-                <p class="text-xs text-gray-400 uppercase mb-2">Your Unique Team ID:</p>
-                <div id="id-val" class="text-4xl font-mono font-black text-yellow-400 tracking-tighter">----</div>
-            </div>
+    <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10">
+        <div class="bg-gray-800 p-6 rounded-xl border border-gray-700">
+            <h2 class="text-xl font-bold mb-4">Register Team</h2>
+            <input type="text" id="t-name" class="w-full p-3 bg-gray-900 rounded mb-4" placeholder="Team Name">
+            <button onclick="create()" class="w-full bg-blue-600 p-3 rounded font-bold uppercase">Create</button>
         </div>
 
-        <div class="bg-gray-800 p-8 rounded-2xl border border-gray-700 shadow-xl">
-            <h2 class="text-2xl font-bold mb-6 text-red-400">Global Rankings</h2>
-            <div id="leaderboard" class="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                <p class="text-gray-500 italic">Connecting to server...</p>
-            </div>
+        <div class="bg-gray-800 p-6 rounded-xl border border-gray-700">
+            <h2 class="text-xl font-bold mb-4">Available Teams & Codes</h2>
+            <div id="team-list" class="space-y-2"></div>
         </div>
     </div>
 
-    <div class="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
-        <a href="./Concept_Demo/index.html" class="block p-4 bg-gray-900 rounded-xl border border-gray-800 hover:border-red-500 transition text-center">
-            <h3 class="font-bold text-red-400">Local Concept Demo</h3>
-        </a>
-        <a href="./Multiplayer_Prototype/index.html" class="block p-4 bg-gray-900 rounded-xl border border-gray-800 hover:border-blue-500 transition text-center">
-            <h3 class="font-bold text-blue-400">Multiplayer Arena</h3>
-        </a>
-    </div>
+    <div class="text-center mt-10"><a href="./Multiplayer_Prototype/index.html" class="bg-white text-black px-10 py-4 rounded-full font-bold">ENTER ARENA</a></div>
 
     <script>
         const socket = io("https://Aloharean-Tug-Of-Quiz.hf.space");
-
-        function createTeam() {
-            const name = document.getElementById('team-name').value.trim();
-            if(!name) return;
-            socket.emit("hub-create-team", { name });
-        }
-
-        socket.on("team-created", (data) => {
-            document.getElementById('id-display-box').classList.remove('hidden');
-            document.getElementById('id-val').innerText = data.id;
-        });
+        function create() { socket.emit("hub-create-team", { name: document.getElementById('t-name').value }); }
+        function del(id) { socket.emit("hub-delete-team", id); }
 
         socket.on("update-leaderboard", (teams) => {
-            const list = document.getElementById('leaderboard');
+            const list = document.getElementById('team-list');
             list.innerHTML = "";
-            const sorted = Object.values(teams).sort((a,b) => b.wins - a.wins);
-            
-            sorted.forEach(t => {
+            Object.values(teams).forEach(t => {
                 list.innerHTML += `
-                    <div class="flex justify-between items-center bg-black/20 p-3 rounded border border-gray-700/50">
-                        <div>
-                            <span class="font-bold text-white">${t.name}</span>
-                            <span class="text-[10px] text-gray-500 ml-2">#${t.id}</span>
-                        </div>
-                        <span class="text-blue-400 font-black">${t.wins}W</span>
-                    </div>
-                `;
+                <div class="flex justify-between items-center bg-black/30 p-2 rounded">
+                    <span>${t.name} <b class="text-yellow-400 ml-2">${t.id}</b></span>
+                    <button onclick="del('${t.id}')" class="text-red-500 text-xs font-bold uppercase">Delete</button>
+                </div>`;
             });
         });
     </script>
