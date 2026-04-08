@@ -9,116 +9,201 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
         body {
             font-family: sans-serif;
             background: #0a1628;
             color: white;
             overflow: hidden;
         }
-
         #root {
             position: relative;
             width: 100vw;
             height: 100vh;
-        }
-
-        /* ── Overlay base ─────────────────────────────────────────── */
-        .overlay {
-            position: absolute;
-            inset: 0;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 50;
-            background: rgba(10, 18, 40, 0.97);
         }
 
-        /* ── Question panels ──────────────────────────────────────── */
+        /* ── Panel strip heights ─────────────────────────────────── */
+        :root {
+            --panel-h: 110px;
+            --hud-h:    36px;
+        }
+
+        /* ── Question panels ─────────────────────────────────────── */
         .panel {
-            position: absolute;
             width: 100%;
-            height: 120px;
-            display: none;
+            height: var(--panel-h);
+            flex-shrink: 0;
+            display: none;          /* shown when match starts */
             flex-direction: row;
             align-items: center;
             justify-content: center;
-            padding: 0 40px;
-            gap: 20px;
+            padding: 0 32px;
+            gap: 18px;
             z-index: 10;
-            background: rgba(10, 18, 40, 0.92);
         }
-        #panel-red  {
-            top: 0;
-            border-bottom: 2px solid rgba(239, 68, 68, 0.4);
+        #panel-red {
+            order: 0;
+            background: rgba(239,68,68,0.08);
+            border-bottom: 2px solid rgba(239,68,68,0.35);
         }
         #panel-blue {
-            bottom: 0;
-            border-top: 2px solid rgba(59, 130, 246, 0.4);
+            order: 3;
+            background: rgba(59,130,246,0.08);
+            border-top: 2px solid rgba(59,130,246,0.35);
+        }
+
+        .team-label {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 3px 10px;
+            border-radius: 99px;
+            margin-bottom: 4px;
+        }
+        .team-label.red  { background: rgba(239,68,68,0.2);  color: #fca5a5; }
+        .team-label.blue { background: rgba(59,130,246,0.2); color: #93c5fd; }
+
+        .q-text {
+            font-size: 17px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 260px;
         }
 
         .ans-input {
-            width: 260px;
+            width: 240px;
             border: 2px solid rgba(255,255,255,0.12);
-            border-radius: 12px;
-            padding: 10px 14px;
-            font-size: 18px;
+            border-radius: 10px;
+            padding: 9px 14px;
+            font-size: 17px;
             text-align: center;
-            background: rgba(255,255,255,0.07);
+            background: rgba(255,255,255,0.06);
             color: white;
             outline: none;
-            transition: border-color 0.2s, background 0.2s;
+            transition: border-color 0.18s, background 0.18s;
+            flex-shrink: 0;
         }
         .ans-input.red:focus  {
             border-color: #ef4444;
-            background: rgba(239,68,68,0.08);
+            background: rgba(239,68,68,0.09);
         }
         .ans-input.blue:focus {
             border-color: #3b82f6;
-            background: rgba(59,130,246,0.08);
+            background: rgba(59,130,246,0.09);
         }
         .ans-input.flash-correct {
             border-color: #22c55e !important;
-            background: rgba(34,197,94,0.15) !important;
+            background: rgba(34,197,94,0.14) !important;
         }
         .ans-input.flash-wrong {
             border-color: #f97316 !important;
             background: rgba(249,115,22,0.10) !important;
         }
 
-        /* ── Std form input ───────────────────────────────────────── */
+        /* ── HUD strip (between red panel and canvas) ────────────── */
+        #hud {
+            order: 1;
+            width: 100%;
+            height: var(--hud-h);
+            flex-shrink: 0;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            background: rgba(0,0,0,0.45);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            z-index: 10;
+        }
+        #hud-score {
+            font-size: 15px;
+            font-weight: 900;
+            letter-spacing: 0.04em;
+        }
+        #hud-timer {
+            font-family: monospace;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            color: #d1d5db;
+        }
+        #timer-bar {
+            position: absolute;
+            /* sits at the very bottom edge of the HUD */
+            top: calc(var(--panel-h) + var(--hud-h) - 3px);
+            left: 0; right: 0;
+            height: 3px;
+            background: rgba(255,255,255,0.06);
+            z-index: 11;
+            display: none;
+        }
+        #timer-fill {
+            height: 100%;
+            width: 100%;
+            background: #22c55e;
+            transition: width 0.9s linear, background 0.5s;
+        }
+
+        /* ── Canvas fills remaining space ────────────────────────── */
+        #stage-wrap {
+            order: 2;
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        #stage {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ── Overlays ────────────────────────────────────────────── */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            background: rgba(10,18,40,0.97);
+        }
+
+        /* ── Std form input ──────────────────────────────────────── */
         .std-input {
             background: rgba(255,255,255,0.08);
             border: 1px solid rgba(255,255,255,0.18);
-            padding: 12px 16px;
+            padding: 11px 16px;
             border-radius: 10px;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
             text-align: center;
-            font-size: 17px;
+            font-size: 16px;
             color: white;
             outline: none;
-            width: 300px;
+            width: 290px;
             transition: border-color 0.2s;
         }
         .std-input:focus { border-color: #3b82f6; }
 
         .big-btn {
-            padding: 13px 48px;
+            padding: 12px 44px;
             border-radius: 99px;
             font-weight: 900;
-            font-size: 17px;
+            font-size: 16px;
             cursor: pointer;
-            transition: opacity 0.15s, transform 0.1s;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            transition: opacity 0.15s, transform 0.1s;
         }
-        .big-btn:hover  { opacity: 0.88; }
+        .big-btn:hover  { opacity: 0.87; }
         .big-btn:active { transform: scale(0.97); }
 
-        /* ── Ready button ─────────────────────────────────────────── */
+        /* ── Ready button ────────────────────────────────────────── */
         #ready-btn {
-            padding: 18px 64px;
+            padding: 18px 60px;
             border-radius: 99px;
             font-weight: 900;
             font-size: 22px;
@@ -131,8 +216,11 @@
             transition: all 0.15s;
             box-shadow: 0 0 32px rgba(34,197,94,0.35);
         }
-        #ready-btn:hover   { background: #15803d; box-shadow: 0 0 48px rgba(34,197,94,0.5); }
-        #ready-btn:active  { transform: scale(0.96); }
+        #ready-btn:hover  {
+            background: #15803d;
+            box-shadow: 0 0 48px rgba(34,197,94,0.5);
+        }
+        #ready-btn:active { transform: scale(0.96); }
         #ready-btn.pressed {
             background: #064e3b;
             border-color: #059669;
@@ -140,92 +228,47 @@
             cursor: default;
             box-shadow: none;
         }
-
-        /* ── Score bar ────────────────────────────────────────────── */
-        #score-bar {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 20;
-            display: none;
-            align-items: center;
-            gap: 12px;
-            background: rgba(0,0,0,0.6);
-            border-radius: 99px;
-            padding: 6px 22px;
-            pointer-events: none;
-        }
-        .score-pill {
-            font-size: 20px;
-            font-weight: 900;
-            padding: 2px 14px;
-            border-radius: 99px;
-        }
-
-        /* ── Timer ────────────────────────────────────────────────── */
-        #timer-bar {
-            position: absolute;
-            top: 122px;           /* just below red panel */
-            left: 0; right: 0;
-            height: 4px;
-            background: rgba(255,255,255,0.06);
-            z-index: 15;
-            display: none;
-        }
-        #timer-fill {
-            height: 100%;
-            background: #22c55e;
-            transition: width 0.9s linear, background 0.5s;
-        }
     </style>
 </head>
 <body>
 <div id="root">
-    <canvas id="stage"></canvas>
 
-    <!-- ── Timer bar (below red panel) ──────────────────────────── -->
-    <div id="timer-bar"><div id="timer-fill" style="width:100%"></div></div>
-
-    <!-- ── Score bar ─────────────────────────────────────────────── -->
-    <div id="score-bar">
-        <span class="score-pill" id="score-red"
-              style="background:rgba(239,68,68,0.25);color:#ef4444;">0</span>
-        <span style="color:#4b5563;font-size:14px;">rounds</span>
-        <span class="score-pill" id="score-blue"
-              style="background:rgba(59,130,246,0.25);color:#3b82f6;">0</span>
-    </div>
-
-    <!-- ── Red panel ─────────────────────────────────────────────── -->
+    <!-- ── Red question panel ──────────────────────────────────── -->
     <div class="panel" id="panel-red">
-        <div class="text-center mr-2 shrink-0">
-            <div id="name-red"
-                 class="bg-red-500/20 text-red-300 px-3 py-1 rounded-full
-                        text-[10px] uppercase font-bold mb-1">
-                Red Team
-            </div>
-            <div class="font-bold text-base" id="q-red">—</div>
+        <div class="shrink-0 text-center">
+            <div class="team-label red" id="name-red">Red Team</div>
+            <div class="q-text"        id="q-red">—</div>
         </div>
-        <input class="ans-input red" id="inp-red" type="text"
-               placeholder="Answer…" autocomplete="off" />
+        <input class="ans-input red" id="inp-red"
+               type="text" placeholder="Answer…" autocomplete="off" />
     </div>
 
-    <!-- ── Blue panel ────────────────────────────────────────────── -->
+    <!-- ── HUD (score + timer) ─────────────────────────────────── -->
+    <div id="hud">
+        <span id="hud-score">— vs —</span>
+        <span id="hud-timer">3:00</span>
+    </div>
+
+    <!-- ── Canvas area ─────────────────────────────────────────── -->
+    <div id="stage-wrap">
+        <canvas id="stage"></canvas>
+    </div>
+
+    <!-- ── Timer progress bar ──────────────────────────────────── -->
+    <div id="timer-bar"><div id="timer-fill"></div></div>
+
+    <!-- ── Blue question panel ─────────────────────────────────── -->
     <div class="panel" id="panel-blue">
-        <div class="text-center mr-2 shrink-0">
-            <div id="name-blue"
-                 class="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full
-                        text-[10px] uppercase font-bold mb-1">
-                Blue Team
-            </div>
-            <div class="font-bold text-base" id="q-blue">—</div>
+        <div class="shrink-0 text-center">
+            <div class="team-label blue" id="name-blue">Blue Team</div>
+            <div class="q-text"         id="q-blue">—</div>
         </div>
-        <input class="ans-input blue" id="inp-blue" type="text"
-               placeholder="Answer…" autocomplete="off" />
+        <input class="ans-input blue" id="inp-blue"
+               type="text" placeholder="Answer…" autocomplete="off" />
     </div>
 
     <!-- ══════════════════════════════════════════════════════════
-         SCREEN 1 — Character Setup
+         SCREEN 1 — Setup
     ══════════════════════════════════════════════════════════ -->
     <div class="overlay" id="screen-setup">
         <h1 class="text-5xl font-black text-blue-400 mb-1 italic uppercase">
@@ -234,17 +277,14 @@
         <p class="text-gray-500 text-xs tracking-widest uppercase mb-8">
             Set up your player, then join a room
         </p>
-
         <input type="text" id="inp-player-name" class="std-input"
                placeholder="Your Player Name" maxlength="20" />
         <input type="text" id="inp-room"        class="std-input"
                placeholder="Room ID  (e.g. MATH1)" />
         <input type="text" id="inp-team-id"     class="std-input"
                placeholder="Team ID  (from Hub)" />
-
         <p id="setup-error"
-           class="text-red-400 text-sm mb-4 hidden text-center w-72"></p>
-
+           class="text-red-400 text-sm mb-3 hidden text-center w-72"></p>
         <button class="big-btn bg-blue-600 text-white" onclick="submitJoin()">
             Join Match
         </button>
@@ -255,38 +295,38 @@
     </div>
 
     <!-- ══════════════════════════════════════════════════════════
-         SCREEN 2 — Lobby / Ready Room
+         SCREEN 2 — Lobby / Ready
     ══════════════════════════════════════════════════════════ -->
     <div class="overlay" id="screen-lobby" style="display:none;">
-        <div class="flex gap-16 mb-10">
+        <p id="lobby-round-label"
+           class="text-gray-500 text-xs uppercase tracking-widest mb-6">
+            Round 1 — Waiting for players
+        </p>
 
-            <!-- Red side -->
+        <div class="flex gap-16 mb-10">
+            <!-- Red -->
             <div class="text-center">
-                <div class="text-red-400 text-xs uppercase font-bold
-                            tracking-widest mb-3" id="lobby-red-name">
-                    Red Team
-                </div>
-                <div id="lobby-red-players" class="space-y-1 min-h-[80px]"></div>
+                <div class="team-label red inline-block mb-3"
+                     id="lobby-red-name">Red Team</div>
+                <div id="lobby-red-players"
+                     class="space-y-1 min-h-[60px]"></div>
             </div>
 
             <div class="text-gray-600 text-4xl font-black self-center">VS</div>
 
-            <!-- Blue side -->
+            <!-- Blue -->
             <div class="text-center">
-                <div class="text-blue-400 text-xs uppercase font-bold
-                            tracking-widest mb-3" id="lobby-blue-name">
-                    Blue Team
-                </div>
-                <div id="lobby-blue-players" class="space-y-1 min-h-[80px]"></div>
+                <div class="team-label blue inline-block mb-3"
+                     id="lobby-blue-name">Blue Team</div>
+                <div id="lobby-blue-players"
+                     class="space-y-1 min-h-[60px]"></div>
             </div>
         </div>
 
-        <button id="ready-btn" onclick="sendReady()">
-            ✅ Ready
-        </button>
+        <button id="ready-btn" onclick="sendReady()">✅ Ready</button>
 
         <p id="lobby-status"
-           class="text-gray-500 text-sm mt-6 text-center animate-pulse">
+           class="text-gray-500 text-sm mt-6 animate-pulse">
             Waiting for all players to ready up…
         </p>
     </div>
@@ -299,10 +339,11 @@
            class="text-gray-500 text-xs uppercase tracking-widest mb-2">
             Round 1
         </p>
-        <h2 class="text-6xl font-black italic mb-4" id="re-title">—</h2>
-        <p class="text-xl text-gray-300 mb-2"   id="re-score">—</p>
-        <p class="text-gray-500 text-sm mt-6 animate-pulse"
-           id="re-next">Next round starting…</p>
+        <h2 class="text-6xl font-black italic mb-3" id="re-title">—</h2>
+        <p class="text-xl text-gray-300"             id="re-score">—</p>
+        <p class="text-gray-600 text-sm mt-8"        id="re-next">
+            Returning to ready room…
+        </p>
     </div>
 
     <!-- ══════════════════════════════════════════════════════════
@@ -313,28 +354,29 @@
             Match Over
         </p>
         <h2 class="text-7xl font-black italic mb-4" id="mo-title">—</h2>
-        <p class="text-2xl text-gray-300 mb-2"  id="mo-score">—</p>
-        <p class="text-gray-400 text-sm mb-10"  id="mo-time">—</p>
+        <p class="text-2xl text-gray-300 mb-1"      id="mo-score">—</p>
+        <p class="text-gray-500 text-sm mb-10"      id="mo-time">—</p>
         <div class="flex gap-4">
             <button class="big-btn bg-white text-black" onclick="playAgain()">
                 Play Again
             </button>
             <a href="../index.html"
-               class="big-btn bg-gray-700 text-white"
-               style="display:flex;align-items:center;">
+               class="big-btn bg-gray-700 text-white flex items-center">
                 ← Hub
             </a>
         </div>
     </div>
 
     <!-- ══════════════════════════════════════════════════════════
-         SCREEN 5 — Paused (team disconnected)
+         SCREEN 5 — Paused
     ══════════════════════════════════════════════════════════ -->
     <div class="overlay" id="screen-paused" style="display:none;">
         <div class="text-5xl mb-4">⏸</div>
         <h2 class="text-2xl font-bold mb-2">Match Paused</h2>
-        <p id="pause-msg" class="text-gray-400 text-center max-w-xs"></p>
+        <p id="pause-msg"
+           class="text-gray-400 text-center max-w-xs"></p>
     </div>
+
 </div><!-- #root -->
 
 <script>
@@ -346,21 +388,23 @@ const socket = io("https://Aloharean-Tug-Of-Quiz.hf.space");
 // ─────────────────────────────────────────────
 //  Canvas
 // ─────────────────────────────────────────────
-const canvas = document.getElementById("stage");
-const ctx    = canvas.getContext("2d");
+const stageWrap = document.getElementById("stage-wrap");
+const canvas    = document.getElementById("stage");
+const ctx       = canvas.getContext("2d");
 let W = 0, H = 0;
 
 function resize() {
-    W = canvas.width  = window.innerWidth;
-    H = canvas.height = window.innerHeight;
+    W = canvas.width  = stageWrap.clientWidth;
+    H = canvas.height = stageWrap.clientHeight;
 }
 window.addEventListener("resize", resize);
 
 // ─────────────────────────────────────────────
 //  Game State
 // ─────────────────────────────────────────────
-let mySide    = null;   // "red" | "blue"
+let mySide    = null;
 let animating = false;
+let alreadyReady = false;
 
 const game = {
     active:       false,
@@ -379,15 +423,15 @@ const game = {
 };
 
 // ─────────────────────────────────────────────
-//  Screens
+//  Screen Management
 // ─────────────────────────────────────────────
-const screens = [
-    "screen-setup", "screen-lobby",
-    "screen-round-end", "screen-match-over", "screen-paused",
+const SCREENS = [
+    "screen-setup", "screen-lobby", "screen-round-end",
+    "screen-match-over", "screen-paused",
 ];
 
 function showScreen(id) {
-    screens.forEach(s => {
+    SCREENS.forEach(s => {
         document.getElementById(s).style.display =
             s === id ? "flex" : "none";
     });
@@ -403,23 +447,23 @@ window.addEventListener("load", () => {
     if (savedID) document.getElementById("inp-team-id").value = savedID;
 
     showScreen("screen-setup");
-    // Enter key on setup inputs
-    ["inp-player-name","inp-room","inp-team-id"].forEach(id => {
-        document.getElementById(id).addEventListener("keydown", e => {
-            if (e.key === "Enter") submitJoin();
-        });
+
+    ["inp-player-name", "inp-room", "inp-team-id"].forEach(id => {
+        document.getElementById(id)
+            .addEventListener("keydown", e => {
+                if (e.key === "Enter") submitJoin();
+            });
     });
 });
 
 // ─────────────────────────────────────────────
-//  Join Flow
+//  Join
 // ─────────────────────────────────────────────
 function submitJoin() {
     const playerName = document.getElementById("inp-player-name").value.trim();
     const room       = document.getElementById("inp-room").value.trim().toUpperCase();
     const teamID     = document.getElementById("inp-team-id").value.trim().toUpperCase();
     const errEl      = document.getElementById("setup-error");
-
     errEl.classList.add("hidden");
 
     if (!playerName) return showErr(errEl, "Please enter your player name.");
@@ -435,16 +479,15 @@ function showErr(el, msg) {
 }
 
 // ─────────────────────────────────────────────
-//  Socket → Join Response
+//  Socket Events
 // ─────────────────────────────────────────────
 socket.on("join-response", (res) => {
     if (!res.success) {
         return showErr(document.getElementById("setup-error"), res.message);
     }
-
-    mySide = res.side;
-    game.redName  = res.redName;
-    game.blueName = res.blueName;
+    mySide         = res.side;
+    game.redName   = res.redName;
+    game.blueName  = res.blueName;
 
     document.getElementById("name-red").textContent  = res.redName;
     document.getElementById("name-blue").textContent = res.blueName;
@@ -454,72 +497,41 @@ socket.on("join-response", (res) => {
     showScreen("screen-lobby");
 });
 
-// ─────────────────────────────────────────────
-//  Socket → Lobby Update
-// ─────────────────────────────────────────────
 socket.on("lobby-update", (data) => {
-    // Update game counts
     game.redCount  = data.redPlayers.length;
     game.blueCount = data.bluePlayers.length;
-
     renderLobbyList("lobby-red-players",  data.redPlayers,  "red");
     renderLobbyList("lobby-blue-players", data.bluePlayers, "blue");
-
-    // Update team name labels if we have them
-    if (game.redName)  document.getElementById("lobby-red-name").textContent  = game.redName;
-    if (game.blueName) document.getElementById("lobby-blue-name").textContent = game.blueName;
 });
 
-function renderLobbyList(elId, players, side) {
-    const el    = document.getElementById(elId);
-    const color = side === "red" ? "text-red-300" : "text-blue-300";
-    const bg    = side === "red"
-        ? "rgba(239,68,68,0.12)" : "rgba(59,130,246,0.12)";
+// Server tells client to go back to ready room between rounds
+socket.on("go-to-ready", (data) => {
+    game.redName  = data.redName;
+    game.blueName = data.blueName;
 
-    if (!players.length) {
-        el.innerHTML = `<p class="text-gray-600 text-xs">Waiting…</p>`;
-        return;
-    }
-    el.innerHTML = players.map(p => `
-        <div class="flex items-center gap-2 px-3 py-1 rounded-lg text-sm"
-             style="background:${bg}">
-            <span class="${color} font-semibold">${esc(p.name)}</span>
-            <span class="text-xs ml-auto">${p.ready ? "✅" : "⏳"}</span>
-        </div>
-    `).join("");
-}
-
-// ─────────────────────────────────────────────
-//  Ready
-// ─────────────────────────────────────────────
-let alreadyReady = false;
-
-function sendReady() {
-    if (alreadyReady) return;
-    alreadyReady = true;
-
+    // Reset ready button state
+    alreadyReady = false;
     const btn = document.getElementById("ready-btn");
-    btn.classList.add("pressed");
-    btn.textContent = "✅ Ready!";
+    btn.classList.remove("pressed");
+    btn.textContent = "✅ Ready";
 
+    document.getElementById("lobby-round-label").textContent =
+        `Round ${data.round} — Ready up!`;
     document.getElementById("lobby-status").textContent =
-        "Waiting for other players…";
+        "Waiting for all players to ready up…";
+    document.getElementById("lobby-red-name").textContent  = data.redName;
+    document.getElementById("lobby-blue-name").textContent = data.blueName;
 
-    socket.emit("player-ready");
-}
+    // Hide game UI
+    document.getElementById("panel-red").style.display  = "none";
+    document.getElementById("panel-blue").style.display = "none";
+    document.getElementById("hud").style.display        = "none";
+    document.getElementById("timer-bar").style.display  = "none";
 
-// Allow Enter in lobby to ready up
-document.addEventListener("keydown", e => {
-    if (e.key === "Enter") {
-        const lobbyVisible =
-            document.getElementById("screen-lobby").style.display !== "none";
-        if (lobbyVisible && !alreadyReady) sendReady();
-    }
+    // Show after short delay so round-end screen is visible first
+    setTimeout(() => showScreen("screen-lobby"), 3000);
 });
 
-// ─────────────────────────────────────────────
-//  Socket → Start Round
-// ─────────────────────────────────────────────
 socket.on("start-round", (data) => {
     game.active       = true;
     game.redScore     = data.redScore;
@@ -529,31 +541,33 @@ socket.on("start-round", (data) => {
     game.totalSeconds = data.duration;
     game.secondsLeft  = data.duration;
 
-    // Update name labels
+    // ── Hard-reset rope position (no smooth lerp for this) ──────────
+    game.ropeX       = 0;
+    game.targetRopeX = 0;
+
     document.getElementById("name-red").textContent  = data.redName;
     document.getElementById("name-blue").textContent = data.blueName;
 
-    updateScoreBar();
+    updateHUD();
 
-    // Show game UI
-    showScreen(null);   // hide all overlays
+    // Show game chrome
     document.getElementById("panel-" + mySide).style.display = "flex";
-    document.getElementById("score-bar").style.display = "flex";
-    document.getElementById("timer-bar").style.display = "block";
+    document.getElementById("hud").style.display              = "flex";
+    document.getElementById("timer-bar").style.display        = "block";
     setTimerFill(data.duration, data.duration);
 
-    // Start render loop (guard against double loops)
+    showScreen(null);   // hide all overlays
+
+    // Start render loop — guard against double-start
     if (!animating) {
         animating = true;
+        resize();
         requestAnimationFrame(animate);
     }
 
     document.getElementById("inp-" + mySide).focus();
 });
 
-// ─────────────────────────────────────────────
-//  Socket → Your Question (private)
-// ─────────────────────────────────────────────
 socket.on("your-question", (q) => {
     game.currentQ = q;
     document.getElementById("q-" + mySide).textContent = q.q;
@@ -562,51 +576,30 @@ socket.on("your-question", (q) => {
     inp.focus();
 });
 
-// ─────────────────────────────────────────────
-//  Socket → Rope Moved
-// ─────────────────────────────────────────────
 socket.on("rope-moved", (data) => {
     game.targetRopeX = data.ropeX;
 });
 
-// ─────────────────────────────────────────────
-//  Socket → Timer Tick
-// ─────────────────────────────────────────────
 socket.on("round-tick", (data) => {
     game.secondsLeft = data.secondsLeft;
     setTimerFill(data.secondsLeft, game.totalSeconds);
+    updateHUD();
 });
 
-function setTimerFill(left, total) {
-    const pct  = Math.max(0, left / total) * 100;
-    const fill = document.getElementById("timer-fill");
-    fill.style.width = pct + "%";
-
-    // Color: green → yellow → red
-    if (pct > 50)      fill.style.background = "#22c55e";
-    else if (pct > 20) fill.style.background = "#eab308";
-    else               fill.style.background = "#ef4444";
-}
-
-// ─────────────────────────────────────────────
-//  Socket → Round End
-// ─────────────────────────────────────────────
 socket.on("round-end", (data) => {
-    game.active   = false;
+    game.active    = false;
     game.redScore  = data.redScore;
     game.blueScore = data.blueScore;
-    updateScoreBar();
 
     document.getElementById("re-round-label").textContent =
         `Round ${data.round}`;
 
     const title = document.getElementById("re-title");
     const score = document.getElementById("re-score");
-    const next  = document.getElementById("re-next");
 
     if (data.draw) {
         title.textContent = "DRAW!";
-        title.style.color = "#a3a3a3";
+        title.style.color = "#9ca3af";
     } else {
         title.textContent = data.winnerName + " wins!";
         title.style.color = data.winner === "red" ? "#ef4444" : "#3b82f6";
@@ -614,47 +607,34 @@ socket.on("round-end", (data) => {
 
     score.textContent =
         `${data.redName}  ${data.redScore} — ${data.blueScore}  ${data.blueName}`;
-    next.textContent  = "Next round starting…";
 
     showScreen("screen-round-end");
-
-    // Hide panels while overlay is showing
-    document.getElementById("panel-red").style.display  = "none";
-    document.getElementById("panel-blue").style.display = "none";
-    document.getElementById("timer-bar").style.display  = "none";
+    // go-to-ready event from server will switch to lobby after 3s
 });
 
-// ─────────────────────────────────────────────
-//  Socket → Match Over
-// ─────────────────────────────────────────────
 socket.on("match-over", (data) => {
     game.active = false;
     animating   = false;
 
-    document.getElementById("screen-round-end").style.display = "none";
-
-    const title  = document.getElementById("mo-title");
-    const score  = document.getElementById("mo-score");
-    const time   = document.getElementById("mo-time");
+    const title = document.getElementById("mo-title");
+    const score = document.getElementById("mo-score");
+    const time  = document.getElementById("mo-time");
 
     if (data.draw) {
         title.textContent = "DRAW!";
-        title.style.color = "#a3a3a3";
+        title.style.color = "#9ca3af";
     } else {
         title.textContent = data.winnerName + " Wins!";
         title.style.color = data.winner === "red" ? "#ef4444" : "#3b82f6";
     }
-
     score.textContent =
         `${data.redName}  ${data.redScore} — ${data.blueScore}  ${data.blueName}`;
-    time.textContent  = `Total round time: ${fmtTime(data.inTime)}`;
+    time.textContent  =
+        `Total round time: ${fmtTime(data.inTime)}`;
 
     showScreen("screen-match-over");
 });
 
-// ─────────────────────────────────────────────
-//  Socket → Match Paused
-// ─────────────────────────────────────────────
 socket.on("match-paused", (data) => {
     game.active = false;
     document.getElementById("pause-msg").textContent = data.message;
@@ -662,19 +642,33 @@ socket.on("match-paused", (data) => {
 });
 
 // ─────────────────────────────────────────────
-//  Socket → Player Count (from lobby-update)
+//  Ready
 // ─────────────────────────────────────────────
-socket.on("lobby-update", (data) => {
-    game.redCount  = data.redPlayers.length;
-    game.blueCount = data.bluePlayers.length;
+function sendReady() {
+    if (alreadyReady) return;
+    alreadyReady = true;
+
+    const btn = document.getElementById("ready-btn");
+    btn.classList.add("pressed");
+    btn.textContent = "✅ Waiting…";
+    document.getElementById("lobby-status").textContent =
+        "Waiting for other players…";
+
+    socket.emit("player-ready");
+}
+
+document.addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    const lobbyVisible =
+        document.getElementById("screen-lobby").style.display !== "none";
+    if (lobbyVisible && !alreadyReady) sendReady();
 });
 
 // ─────────────────────────────────────────────
-//  Answer Checking
+//  Answer Check
 // ─────────────────────────────────────────────
 function checkAns() {
     if (!game.active || !game.currentQ) return;
-
     const inp     = document.getElementById("inp-" + mySide);
     const userAns = inp.value.trim().toLowerCase();
     const correct = game.currentQ.a.toString().toLowerCase();
@@ -695,43 +689,92 @@ function flashInput(inp, cls) {
     setTimeout(() => inp.classList.remove(cls), 350);
 }
 
-document.getElementById("inp-red").addEventListener("keydown",
-    e => { if (e.key === "Enter") checkAns(); });
-document.getElementById("inp-blue").addEventListener("keydown",
-    e => { if (e.key === "Enter") checkAns(); });
+document.getElementById("inp-red")
+    .addEventListener("keydown", e => { if (e.key === "Enter") checkAns(); });
+document.getElementById("inp-blue")
+    .addEventListener("keydown", e => { if (e.key === "Enter") checkAns(); });
 
 // ─────────────────────────────────────────────
 //  Play Again
 // ─────────────────────────────────────────────
 function playAgain() {
-    // Return to setup screen state (fresh join)
-    alreadyReady  = false;
-    mySide        = null;
-    animating     = false;
-    game.active   = false;
-    game.ropeX    = 0;
+    alreadyReady     = false;
+    mySide           = null;
+    animating        = false;
+    game.active      = false;
+    game.ropeX       = 0;
     game.targetRopeX = 0;
-    game.redScore = 0;
-    game.blueScore = 0;
+    game.redScore    = 0;
+    game.blueScore   = 0;
 
     document.getElementById("panel-red").style.display  = "none";
     document.getElementById("panel-blue").style.display = "none";
-    document.getElementById("score-bar").style.display  = "none";
+    document.getElementById("hud").style.display        = "none";
     document.getElementById("timer-bar").style.display  = "none";
-    document.getElementById("ready-btn").classList.remove("pressed");
-    document.getElementById("ready-btn").textContent = "✅ Ready";
-    document.getElementById("lobby-status").textContent =
-        "Waiting for all players to ready up…";
+
+    const btn = document.getElementById("ready-btn");
+    btn.classList.remove("pressed");
+    btn.textContent = "✅ Ready";
 
     showScreen("screen-setup");
 }
 
 // ─────────────────────────────────────────────
-//  Score Bar
+//  HUD helpers
 // ─────────────────────────────────────────────
-function updateScoreBar() {
-    document.getElementById("score-red").textContent  = game.redScore;
-    document.getElementById("score-blue").textContent = game.blueScore;
+function updateHUD() {
+    const scoreEl = document.getElementById("hud-score");
+    const timerEl = document.getElementById("hud-timer");
+
+    // Score
+    const rn = game.redName  || "Red";
+    const bn = game.blueName || "Blue";
+    scoreEl.innerHTML =
+        `<span style="color:#f87171">${esc(rn)}</span>` +
+        `<span style="color:#6b7280;margin:0 8px">` +
+            `${game.redScore} — ${game.blueScore}` +
+        `</span>` +
+        `<span style="color:#60a5fa">${esc(bn)}</span>`;
+
+    // Timer
+    const s   = game.secondsLeft;
+    const m   = Math.floor(s / 60);
+    const sec = String(s % 60).padStart(2, "0");
+    timerEl.textContent = `${m}:${sec}`;
+    timerEl.style.color =
+        s > 60 ? "#d1d5db" :
+        s > 20 ? "#facc15" : "#ef4444";
+}
+
+function setTimerFill(left, total) {
+    const pct  = Math.max(0, left / total) * 100;
+    const fill = document.getElementById("timer-fill");
+    fill.style.width = pct + "%";
+    fill.style.background =
+        pct > 50 ? "#22c55e" :
+        pct > 20 ? "#eab308" : "#ef4444";
+}
+
+// ─────────────────────────────────────────────
+//  Lobby player list renderer
+// ─────────────────────────────────────────────
+function renderLobbyList(elId, players, side) {
+    const el  = document.getElementById(elId);
+    const bg  = side === "red"
+        ? "rgba(239,68,68,0.12)" : "rgba(59,130,246,0.12)";
+    const col = side === "red" ? "text-red-300" : "text-blue-300";
+
+    if (!players.length) {
+        el.innerHTML = `<p class="text-gray-600 text-xs">Waiting…</p>`;
+        return;
+    }
+    el.innerHTML = players.map(p => `
+        <div class="flex items-center gap-2 px-3 py-1 rounded-lg text-sm"
+             style="background:${bg}">
+            <span class="${col} font-semibold">${esc(p.name)}</span>
+            <span class="ml-auto text-xs">${p.ready ? "✅" : "⏳"}</span>
+        </div>
+    `).join("");
 }
 
 // ─────────────────────────────────────────────
@@ -752,7 +795,7 @@ function esc(str) {
 }
 
 // ─────────────────────────────────────────────
-//  Rendering
+//  Drawing
 // ─────────────────────────────────────────────
 function drawGrid() {
     ctx.strokeStyle = "rgba(255,255,255,0.025)";
@@ -769,140 +812,123 @@ function drawGoalLines(cx, cy) {
     ctx.lineWidth = 3;
     ctx.setLineDash([10, 8]);
 
-    ctx.strokeStyle = "rgba(239,68,68,0.4)";
+    ctx.strokeStyle = "rgba(239,68,68,0.45)";
     ctx.beginPath();
-    ctx.moveTo(cx - game.winLimit, cy - 140);
-    ctx.lineTo(cx - game.winLimit, cy + 140);
+    ctx.moveTo(cx - game.winLimit, 0);
+    ctx.lineTo(cx - game.winLimit, H);
     ctx.stroke();
 
-    ctx.strokeStyle = "rgba(59,130,246,0.4)";
+    ctx.strokeStyle = "rgba(59,130,246,0.45)";
     ctx.beginPath();
-    ctx.moveTo(cx + game.winLimit, cy - 140);
-    ctx.lineTo(cx + game.winLimit, cy + 140);
+    ctx.moveTo(cx + game.winLimit, 0);
+    ctx.lineTo(cx + game.winLimit, H);
     ctx.stroke();
 
     ctx.setLineDash([]);
 
-    // Goal zone shading
+    // Goal zone tint
     ctx.fillStyle = "rgba(239,68,68,0.04)";
-    ctx.fillRect(0, cy-140, cx - game.winLimit, 280);
+    ctx.fillRect(0, 0, cx - game.winLimit, H);
     ctx.fillStyle = "rgba(59,130,246,0.04)";
-    ctx.fillRect(cx + game.winLimit, cy-140, W, 280);
+    ctx.fillRect(cx + game.winLimit, 0, W, H);
 }
 
-function drawRope(cy) {
+// Players stand alongside the rope on both sides
+// They are drawn BEFORE the rope so rope appears on top
+function drawPlayers(cx, cy) {
+    const rx      = cx + game.ropeX;
+    const spacing = 58;     // gap between players
+    const standY  = cy;     // vertical centre for player mid-body
+    const bodyH   = 46;
+    const headR   = 20;
+
+    function drawOne(x, color) {
+        const bodyTop = standY - bodyH / 2;
+
+        // Body shadow
+        ctx.fillStyle = "rgba(0,0,0,0.28)";
+        ctx.beginPath();
+        ctx.roundRect(x - 18 + 3, bodyTop + 4, 36, bodyH, [8]);
+        ctx.fill();
+
+        // Body
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.roundRect(x - 18, bodyTop, 36, bodyH, [8]);
+        ctx.fill();
+
+        // Head
+        const headY = bodyTop - headR - 2;
+        ctx.fillStyle = "rgba(0,0,0,0.2)";
+        ctx.beginPath();
+        ctx.arc(x + 2, headY + 3, headR, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#D4A574";
+        ctx.beginPath();
+        ctx.arc(x, headY, headR, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Red players — stacked to the LEFT of the knot, inward first
+    for (let i = 0; i < game.redCount; i++) {
+        const x = rx - 60 - i * spacing;
+        drawOne(x, "#ef4444");
+    }
+
+    // Blue players — stacked to the RIGHT of the knot, inward first
+    for (let i = 0; i < game.blueCount; i++) {
+        const x = rx + 60 + i * spacing;
+        drawOne(x, "#3b82f6");
+    }
+}
+
+function drawRopeAndKnot(cx, cy) {
+    const rx = cx + game.ropeX;
+
+    // ── Rope ──────────────────────────────────────────────────────
     // Shadow
     ctx.strokeStyle = "rgba(0,0,0,0.5)";
     ctx.lineWidth   = 16;
-    ctx.beginPath(); ctx.moveTo(0, cy+5); ctx.lineTo(W, cy+5); ctx.stroke();
-    // Rope
+    ctx.beginPath(); ctx.moveTo(0, cy + 5); ctx.lineTo(W, cy + 5); ctx.stroke();
+    // Body
     ctx.strokeStyle = "#92400e";
     ctx.lineWidth   = 10;
     ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
     // Highlight
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.strokeStyle = "rgba(255,255,255,0.07)";
     ctx.lineWidth   = 3;
-    ctx.beginPath(); ctx.moveTo(0, cy-3); ctx.lineTo(W, cy-3); ctx.stroke();
-}
+    ctx.beginPath(); ctx.moveTo(0, cy - 3); ctx.lineTo(W, cy - 3); ctx.stroke();
 
-function drawKnot(rx, cy) {
-    // Shadow
+    // ── Knot ──────────────────────────────────────────────────────
     ctx.fillStyle = "rgba(0,0,0,0.45)";
-    ctx.beginPath(); ctx.arc(rx+4, cy+6, 20, 0, Math.PI*2); ctx.fill();
-    // Outer ring
+    ctx.beginPath(); ctx.arc(rx + 4, cy + 6, 20, 0, Math.PI * 2); ctx.fill();
+
     ctx.fillStyle = "#78350f";
-    ctx.beginPath(); ctx.arc(rx, cy, 20, 0, Math.PI*2); ctx.fill();
-    // Inner
+    ctx.beginPath(); ctx.arc(rx, cy, 20, 0, Math.PI * 2); ctx.fill();
+
     ctx.fillStyle = "#92400e";
-    ctx.beginPath(); ctx.arc(rx, cy, 12, 0, Math.PI*2); ctx.fill();
-    // Core
+    ctx.beginPath(); ctx.arc(rx, cy, 12, 0, Math.PI * 2); ctx.fill();
+
     ctx.fillStyle = "#b45309";
-    ctx.beginPath(); ctx.arc(rx, cy, 6, 0, Math.PI*2); ctx.fill();
-}
-
-function drawPlayer(cy, x, color, index) {
-    const r  = 20;
-    const bh = 44;
-    // Alternate above/below rope
-    const isAbove = index % 2 === 0;
-    const bodyY   = isAbove ? cy - r - bh - 8 : cy + 8;
-    const headCY  = isAbove ? bodyY : bodyY + bh;
-
-    // Body shadow
-    ctx.fillStyle = "rgba(0,0,0,0.3)";
-    ctx.beginPath();
-    ctx.roundRect(x - r + 3, bodyY + 4, r*2, bh, [8]);
-    ctx.fill();
-
-    // Body
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.roundRect(x - r, bodyY, r*2, bh, [8]);
-    ctx.fill();
-
-    // Head shadow
-    ctx.fillStyle = "rgba(0,0,0,0.2)";
-    ctx.beginPath();
-    ctx.arc(x+2, headCY+3, r, Math.PI, 0);
-    ctx.fill();
-
-    // Head
-    ctx.fillStyle = "#D4A574";
-    ctx.beginPath();
-    ctx.arc(x, headCY, r, Math.PI, 0);
-    ctx.fill();
-
-    // Hands
-    ctx.fillStyle = "#D4A574";
-    ctx.beginPath();
-    ctx.arc(x - 11, cy, 7, 0, Math.PI*2);
-    ctx.arc(x + 11, cy, 7, 0, Math.PI*2);
-    ctx.fill();
-}
-
-// Draw the seconds countdown on canvas
-function drawTimer(cx, cy) {
-    if (!game.active) return;
-    const s   = game.secondsLeft;
-    const m   = Math.floor(s / 60);
-    const sec = String(s % 60).padStart(2, "0");
-    const txt = `${m}:${sec}`;
-
-    ctx.font      = "bold 28px monospace";
-    ctx.textAlign = "center";
-
-    // Colour shifts as time runs low
-    const pct = s / game.totalSeconds;
-    ctx.fillStyle = pct > 0.33 ? "rgba(255,255,255,0.7)" : "#ef4444";
-
-    // Place just above centre
-    ctx.fillText(txt, cx, cy - game.winLimit * 0.15);
+    ctx.beginPath(); ctx.arc(rx, cy, 6,  0, Math.PI * 2); ctx.fill();
 }
 
 function animate() {
     if (!animating) return;
 
+    // Smooth lerp toward target
     game.ropeX += (game.targetRopeX - game.ropeX) * 0.12;
 
     ctx.clearRect(0, 0, W, H);
 
     const cx = W / 2;
     const cy = H / 2;
-    const rx = cx + game.ropeX;
 
     drawGrid();
     drawGoalLines(cx, cy);
-    drawRope(cy);
-    drawKnot(rx, cy);
-    drawTimer(cx, cy);
-
-    // Players
-    for (let i = 0; i < game.redCount; i++) {
-        drawPlayer(cy, rx - 80 - i * 60, "#ef4444", i);
-    }
-    for (let i = 0; i < game.blueCount; i++) {
-        drawPlayer(cy, rx + 80 + i * 60, "#3b82f6", i);
-    }
+    drawPlayers(cx, cy);         // players first
+    drawRopeAndKnot(cx, cy);     // rope drawn on top of players
 
     requestAnimationFrame(animate);
 }
