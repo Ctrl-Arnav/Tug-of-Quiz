@@ -24,7 +24,7 @@
         }
 
         :root {
-            --panel-h: 110px;
+            --panel-h: 120px;
             --hud-h:    36px;
         }
 
@@ -64,14 +64,15 @@
         .team-label.red  { background: rgba(239,68,68,0.2);  color: #fca5a5; }
         .team-label.blue { background: rgba(59,130,246,0.2); color: #93c5fd; }
 
-        .q-text {
-            font-size: 17px;
-            font-weight: 700;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 260px;
-        }
+    .q-text {
+        font-size: 14px;
+        font-weight: 700;
+        white-space: normal;
+        overflow: visible;
+        max-width: 220px;
+        line-height: 1.35;
+        text-align: left;
+    }
 
         .ans-input {
             width: 240px;
@@ -338,12 +339,12 @@
 
     <!-- ── Red panel ─────────────────────────────────────────── -->
     <div class="panel" id="panel-red">
+        <input class="ans-input red" id="inp-red"
+               type="text" placeholder="Answer…" autocomplete="off" />
         <div class="shrink-0 text-center">
             <div class="team-label red" id="name-red">Red Team</div>
             <div class="q-text"        id="q-red">—</div>
         </div>
-        <input class="ans-input red" id="inp-red"
-               type="text" placeholder="Answer…" autocomplete="off" />
     </div>
 
     <!-- ── HUD ───────────────────────────────────────────────── -->
@@ -366,12 +367,12 @@
 
     <!-- ── Blue panel ────────────────────────────────────────── -->
     <div class="panel" id="panel-blue">
+        <input class="ans-input blue" id="inp-blue"
+               type="text" placeholder="Answer…" autocomplete="off" />
         <div class="shrink-0 text-center">
             <div class="team-label blue" id="name-blue">Blue Team</div>
             <div class="q-text"         id="q-blue">—</div>
         </div>
-        <input class="ans-input blue" id="inp-blue"
-               type="text" placeholder="Answer…" autocomplete="off" />
     </div>
 
     <!-- ── Toast ─────────────────────────────────────────────── -->
