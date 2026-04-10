@@ -87,7 +87,7 @@
             transition: border-color 0.18s, background 0.18s;
             flex-shrink: 0;
         }
-        .ans-input.red:focus  {
+        .ans-input.red:focus {
             border-color: #ef4444;
             background: rgba(239,68,68,0.09);
         }
@@ -117,6 +117,7 @@
             background: rgba(0,0,0,0.55);
             border-bottom: 1px solid rgba(255,255,255,0.05);
             z-index: 10;
+            position: relative;
         }
         #hud-score { font-size: 15px; font-weight: 900; }
         #hud-center {
@@ -137,11 +138,12 @@
             font-weight: 700;
         }
 
-        /* ── Timer bar ──────────────────────────────────────────── */
+        /* ── Timer bar — anchored to bottom of HUD ──────────────── */
         #timer-bar {
             position: absolute;
-            top: calc(var(--panel-h) + var(--hud-h) - 3px);
-            left: 0; right: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
             height: 3px;
             background: rgba(255,255,255,0.06);
             z-index: 11;
@@ -219,7 +221,7 @@
             box-shadow: 0 0 28px rgba(34,197,94,0.35);
             margin-top: 8px;
         }
-        #ready-btn:hover  {
+        #ready-btn:hover {
             background: #15803d;
             box-shadow: 0 0 44px rgba(34,197,94,0.5);
         }
@@ -332,7 +334,7 @@
         </div>
     </div>
 
-    <!-- ── HUD ───────────────────────────────────────────────── -->
+    <!-- ── HUD (score + theme + timer) ──────────────────────── -->
     <div id="hud">
         <span id="hud-score">— vs —</span>
         <div id="hud-center">
@@ -340,15 +342,14 @@
             <span id="hud-timer">3:00</span>
         </div>
         <span style="width:160px"></span>
+        <!-- Timer bar anchored to bottom of HUD -->
+        <div id="timer-bar"><div id="timer-fill"></div></div>
     </div>
 
     <!-- ── Canvas ────────────────────────────────────────────── -->
     <div id="stage-wrap">
         <canvas id="stage"></canvas>
     </div>
-
-    <!-- ── Timer bar ─────────────────────────────────────────── -->
-    <div id="timer-bar"><div id="timer-fill"></div></div>
 
     <!-- ── Blue panel ────────────────────────────────────────── -->
     <div class="panel" id="panel-blue">
@@ -375,9 +376,9 @@
         </p>
         <input type="text" id="inp-player-name" class="std-input"
                placeholder="Your Player Name" maxlength="20" />
-        <input type="text" id="inp-room"        class="std-input"
+        <input type="text" id="inp-room" class="std-input"
                placeholder="Room ID  (e.g. MATH1)" />
-        <input type="text" id="inp-team-id"     class="std-input"
+        <input type="text" id="inp-team-id" class="std-input"
                placeholder="Team ID  (from Hub)" />
         <p id="setup-error"
            class="text-red-400 text-sm mb-3 hidden text-center w-72"></p>
@@ -433,7 +434,8 @@
            class="text-gray-500 text-xs uppercase tracking-widest mb-1">
             Round 1
         </p>
-        <p id="re-theme" class="text-gray-600 text-xs uppercase tracking-widest mb-3"></p>
+        <p id="re-theme"
+           class="text-gray-600 text-xs uppercase tracking-widest mb-3"></p>
         <h2 class="text-6xl font-black italic mb-3" id="re-title">—</h2>
         <p class="text-xl text-gray-300" id="re-score">—</p>
         <p class="text-gray-600 text-sm mt-8">Returning to ready room…</p>
@@ -443,7 +445,9 @@
          SCREEN 4 — Match Over
     ════════════════════════════════════════════════════════ -->
     <div class="overlay" id="screen-match-over" style="display:none;">
-        <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">Match Over</p>
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">
+            Match Over
+        </p>
         <h2 class="text-7xl font-black italic mb-4" id="mo-title">—</h2>
         <p class="text-2xl text-gray-300 mb-1"  id="mo-score">—</p>
         <p class="text-gray-500 text-sm mb-10"  id="mo-time">—</p>
@@ -467,7 +471,7 @@
         <p id="pause-msg" class="text-gray-400 text-center max-w-xs"></p>
     </div>
 
-</div>
+</div><!-- #root -->
 
 <script>
 // ─────────────────────────────────────────────
@@ -486,22 +490,23 @@ function resize() {
 window.addEventListener("resize", resize);
 
 // ─────────────────────────────────────────────
-//  Sprite Loading
+//  Sprite constants — tune these for alignment
 // ─────────────────────────────────────────────
-// ── Tune these constants until alignment feels right ──────────
-const SPRITE_W        = 64;    // rendered width  px
-const SPRITE_H        = 96;    // rendered height px
-const SPRITE_OFFSET_Y = -10;   // shift up(-) / down(+) from rope centre
-const SPRITE_GAP      = 70;    // horizontal gap between players
-const SPRITE_ROPE_GAP = 40;    // gap between knot and nearest player
+const SPRITE_W        = 192;  // 1:1 ratio, doubled size
+const SPRITE_H        = 192;  // same as width
+const SPRITE_OFFSET_Y = -10;  // shift up(-) or down(+) from rope centre
+const SPRITE_GAP      = 0;    // no gap between players
+const SPRITE_ROPE_GAP = 20;   // gap between knot edge and nearest sprite
 
+// ─────────────────────────────────────────────
+//  Asset Loading
+// ─────────────────────────────────────────────
 const sprites = {
     "red-male":    loadImg("../assets/PlayerM_Red (1).webp"),
     "red-female":  loadImg("../assets/PlayerF_Red(1).webp"),
     "blue-male":   loadImg("../assets/PlayerM_Blue (1).webp"),
     "blue-female": loadImg("../assets/PlayerF_Blue (1).webp"),
 };
-
 const bgImage = loadImg("../assets/BeachBG (1).webp");
 
 function loadImg(src) {
@@ -529,8 +534,7 @@ const game = {
     winLimit:     250,
     redScore:     0,
     blueScore:    0,
-    // Sprite lists — arrays of "male"|"female"
-    redSprites:   [],
+    redSprites:   [],   // ["male","female",...]
     blueSprites:  [],
     currentQ:     null,
     redName:      "Red Team",
@@ -542,12 +546,13 @@ const game = {
 };
 
 // ─────────────────────────────────────────────
-//  Screens
+//  Screen Management
 // ─────────────────────────────────────────────
 const SCREENS = [
-    "screen-setup","screen-lobby","screen-round-end",
-    "screen-match-over","screen-paused",
+    "screen-setup", "screen-lobby", "screen-round-end",
+    "screen-match-over", "screen-paused",
 ];
+
 function showScreen(id) {
     SCREENS.forEach(s => {
         document.getElementById(s).style.display =
@@ -564,7 +569,7 @@ window.addEventListener("load", () => {
     if (savedID) document.getElementById("inp-team-id").value = savedID;
     showScreen("screen-setup");
 
-    ["inp-player-name","inp-room","inp-team-id"].forEach(id => {
+    ["inp-player-name", "inp-room", "inp-team-id"].forEach(id => {
         document.getElementById(id)
             .addEventListener("keydown", e => {
                 if (e.key === "Enter") submitJoin();
@@ -606,7 +611,7 @@ function buildThemeGrid(themes, emojis) {
         <div class="theme-card ${myVotedTheme === t ? "selected" : ""}
                     ${votingLocked ? "locked" : ""}"
              id="tc-${slugify(t)}"
-             onclick="castVote('${t.replace(/'/g,"\\'")}')">
+             onclick="castVote('${t.replace(/'/g, "\\'")}')">
             <div class="theme-card-top">
                 <span class="theme-name">${esc(t)}</span>
                 <span class="theme-emoji">${emojis[t] || "❓"}</span>
@@ -704,6 +709,7 @@ socket.on("go-to-ready", (data) => {
     const btn = document.getElementById("ready-btn");
     btn.classList.remove("pressed");
     btn.textContent = "✅ Ready";
+
     document.getElementById("lobby-round-label").textContent =
         `Round ${data.round} — Vote for a theme & ready up`;
     document.getElementById("lobby-status").textContent =
@@ -717,7 +723,6 @@ socket.on("go-to-ready", (data) => {
     document.getElementById("panel-red").style.display  = "none";
     document.getElementById("panel-blue").style.display = "none";
     document.getElementById("hud").style.display        = "none";
-    document.getElementById("timer-bar").style.display  = "none";
 
     setTimeout(() => showScreen("screen-lobby"), 3000);
 });
@@ -733,9 +738,10 @@ socket.on("start-round", (data) => {
     game.winLimit     = data.winLimit;
     game.currentTheme = data.theme;
     game.themeEmoji   = data.themeEmoji;
-    game.redSprites   = data.redSprites;   // ["male","female",...]
+    game.redSprites   = data.redSprites;
     game.blueSprites  = data.blueSprites;
 
+    // Hard reset rope — no lerp
     game.ropeX       = 0;
     game.targetRopeX = 0;
 
@@ -783,7 +789,8 @@ socket.on("round-end", (data) => {
     game.redScore  = data.redScore;
     game.blueScore = data.blueScore;
 
-    document.getElementById("re-round-label").textContent = `Round ${data.round}`;
+    document.getElementById("re-round-label").textContent =
+        `Round ${data.round}`;
     document.getElementById("re-theme").textContent =
         (game.themeEmoji ? game.themeEmoji + " " : "") + data.theme;
 
@@ -1011,9 +1018,9 @@ function fmtTime(seconds) {
 
 function esc(str) {
     return String(str)
-        .replace(/&/g,"&amp;").replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;").replace(/"/g,"&quot;")
-        .replace(/'/g,"&#039;");
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 // ─────────────────────────────────────────────
@@ -1021,7 +1028,6 @@ function esc(str) {
 // ─────────────────────────────────────────────
 function drawBackground() {
     if (bgImage.complete && bgImage.naturalWidth > 0) {
-        // Cover the canvas maintaining aspect ratio
         const imgRatio    = bgImage.naturalWidth / bgImage.naturalHeight;
         const canvasRatio = W / H;
         let sw, sh, sx, sy;
@@ -1039,7 +1045,6 @@ function drawBackground() {
         }
         ctx.drawImage(bgImage, sx, sy, sw, sh, 0, 0, W, H);
     } else {
-        // Fallback solid colour while image loads
         ctx.fillStyle = "#0a1628";
         ctx.fillRect(0, 0, W, H);
     }
@@ -1067,24 +1072,28 @@ function drawGoalLines(cx) {
 function drawSprites(cx, cy) {
     const rx = cx + game.ropeX;
 
-    // Red players — stacked left of knot, inward first
+    // Red players — left of knot, inward first, normal orientation
     game.redSprites.forEach((gender, i) => {
         const img = sprites["red-" + gender];
         if (!img.complete || !img.naturalWidth) return;
 
-        const x = rx - SPRITE_ROPE_GAP - SPRITE_W / 2 - i * SPRITE_GAP;
+        const x = rx - SPRITE_ROPE_GAP - SPRITE_W - i * SPRITE_W;
         const y = cy + SPRITE_OFFSET_Y - SPRITE_H / 2;
         ctx.drawImage(img, x, y, SPRITE_W, SPRITE_H);
     });
 
-    // Blue players — stacked right of knot, inward first
+    // Blue players — right of knot, inward first, flipped horizontally
     game.blueSprites.forEach((gender, i) => {
         const img = sprites["blue-" + gender];
         if (!img.complete || !img.naturalWidth) return;
 
-        const x = rx + SPRITE_ROPE_GAP - SPRITE_W / 2 + i * SPRITE_GAP;
+        const x = rx + SPRITE_ROPE_GAP + i * SPRITE_W;
         const y = cy + SPRITE_OFFSET_Y - SPRITE_H / 2;
-        ctx.drawImage(img, x, y, SPRITE_W, SPRITE_H);
+
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(img, -(x + SPRITE_W), y, SPRITE_W, SPRITE_H);
+        ctx.restore();
     });
 }
 
@@ -1094,26 +1103,29 @@ function drawRopeAndKnot(cx, cy) {
     // Shadow
     ctx.strokeStyle = "rgba(0,0,0,0.5)";
     ctx.lineWidth   = 16;
-    ctx.beginPath(); ctx.moveTo(0, cy+5); ctx.lineTo(W, cy+5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, cy + 5); ctx.lineTo(W, cy + 5); ctx.stroke();
+
     // Rope
     ctx.strokeStyle = "#92400e";
     ctx.lineWidth   = 10;
     ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+
     // Highlight
     ctx.strokeStyle = "rgba(255,255,255,0.07)";
     ctx.lineWidth   = 3;
-    ctx.beginPath(); ctx.moveTo(0, cy-3); ctx.lineTo(W, cy-3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, cy - 3); ctx.lineTo(W, cy - 3); ctx.stroke();
 
     // Knot shadow
     ctx.fillStyle = "rgba(0,0,0,0.45)";
-    ctx.beginPath(); ctx.arc(rx+4, cy+6, 20, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(rx + 4, cy + 6, 20, 0, Math.PI * 2); ctx.fill();
+
     // Knot
     ctx.fillStyle = "#78350f";
-    ctx.beginPath(); ctx.arc(rx, cy, 20, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(rx, cy, 20, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#92400e";
-    ctx.beginPath(); ctx.arc(rx, cy, 12, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(rx, cy, 12, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#b45309";
-    ctx.beginPath(); ctx.arc(rx, cy,  6, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(rx, cy,  6, 0, Math.PI * 2); ctx.fill();
 }
 
 function animate() {
@@ -1126,10 +1138,10 @@ function animate() {
     const cx = W / 2;
     const cy = H / 2;
 
-    drawBackground();            // 1. bg image (no grid)
-    drawGoalLines(cx);           // 2. goal lines on top of bg
-    drawSprites(cx, cy);         // 3. sprites behind rope
-    drawRopeAndKnot(cx, cy);     // 4. rope on top of everything
+    drawBackground();        // 1. bg
+    drawGoalLines(cx);       // 2. goal lines
+    drawSprites(cx, cy);     // 3. sprites behind rope
+    drawRopeAndKnot(cx, cy); // 4. rope on top
 
     requestAnimationFrame(animate);
 }
