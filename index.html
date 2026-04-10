@@ -14,12 +14,12 @@
     Tug of Quiz
 </h1>
 <p class="text-center text-gray-500 text-xs tracking-widest uppercase mb-10">
-    Team Hub — Register · Manage · Spectate Standings
+    Team Hub — Register · Manage · Standings
 </p>
 
 <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
 
-    <!-- ── Register Team ───────────────────────────────────────── -->
+    <!-- ── Register Team ──────────────────────────────────────────── -->
     <div class="bg-gray-800/60 p-6 rounded-2xl border border-gray-700 flex flex-col">
         <h2 class="text-xl font-bold mb-1">Register Team</h2>
         <p class="text-gray-400 text-xs mb-5">Get a unique Team ID to enter the Arena</p>
@@ -28,10 +28,9 @@
                class="w-full p-3 bg-gray-900 rounded-lg mb-3 text-white outline-none
                       border border-gray-700 focus:border-blue-500 transition"
                placeholder="Team Name" />
-
         <button onclick="createTeam()"
-                class="w-full bg-blue-600 hover:bg-blue-700 transition p-3 rounded-lg
-                       font-bold uppercase tracking-wide">
+                class="w-full bg-blue-600 hover:bg-blue-700 transition p-3
+                       rounded-lg font-bold uppercase tracking-wide">
             Create Team
         </button>
 
@@ -44,35 +43,34 @@
             <p id="confirm-id"
                class="text-3xl font-black text-yellow-400 tracking-widest mb-2"></p>
             <p class="text-gray-500 text-xs">
-                Share this ID with your teammates.<br>
-                It has been saved to your browser.
+                Share this ID with your teammates.<br>It has been saved to your browser.
             </p>
         </div>
     </div>
 
-    <!-- ── Active Teams ─────────────────────────────────────────── -->
+    <!-- ── Active Teams ───────────────────────────────────────────── -->
     <div class="bg-gray-800/60 p-6 rounded-2xl border border-gray-700 flex flex-col">
         <h2 class="text-xl font-bold mb-1">Active Teams</h2>
         <p class="text-gray-400 text-xs mb-5">All registered teams and their IDs</p>
-
         <div id="team-list"
-             class="space-y-2 flex-1 overflow-y-auto max-h-80 pr-1 scrollbar-thin">
+             class="space-y-2 flex-1 overflow-y-auto max-h-80 pr-1">
             <p class="text-gray-600 text-sm text-center mt-10">No teams yet...</p>
         </div>
     </div>
 
-    <!-- ── Leaderboard ──────────────────────────────────────────── -->
+    <!-- ── Leaderboard ────────────────────────────────────────────── -->
     <div class="bg-gray-800/60 p-6 rounded-2xl border border-gray-700 flex flex-col">
         <h2 class="text-xl font-bold mb-1">🏆 Leaderboard</h2>
-        <p class="text-gray-400 text-xs mb-4">Ranked by average round time (fastest first)</p>
+        <p class="text-gray-400 text-xs mb-4">Ranked by score</p>
 
         <!-- Column headers -->
-        <div class="grid grid-cols-4 text-[10px] uppercase text-gray-500
-                    tracking-widest font-bold mb-2 px-2">
-            <span>Team</span>
+        <div class="grid grid-cols-6 text-[9px] uppercase text-gray-500
+                    tracking-widest font-bold mb-2 px-1">
+            <span class="col-span-2">Team</span>
             <span class="text-center">Won</span>
-            <span class="text-center">In-Time</span>
             <span class="text-center">Avg</span>
+            <span class="text-center">Ans</span>
+            <span class="text-center">Score</span>
         </div>
 
         <div id="leaderboard"
@@ -84,27 +82,58 @@
     </div>
 </div>
 
-<!-- ── Enter Arena ──────────────────────────────────────────────── -->
+<!-- ── Enter Arena ────────────────────────────────────────────────── -->
 <div class="text-center mt-14">
-    <a href="./proto2/index.html"
+    <a href="./prefinal/index.html"
        class="bg-white text-black px-14 py-4 rounded-full font-black text-lg
               hover:bg-gray-200 transition uppercase tracking-wide shadow-xl">
         ⚔️ Enter Arena
     </a>
     <p class="text-gray-600 text-xs mt-4">
-        Both teams must be registered before entering the Arena
+        Both teams must be registered before entering
     </p>
+</div>
+
+<!-- ── Delete Password Modal ──────────────────────────────────────── -->
+<div id="delete-modal"
+     class="fixed inset-0 bg-black/70 z-50 hidden items-center justify-center">
+    <div class="bg-gray-800 border border-gray-600 rounded-2xl p-8
+                w-full max-w-sm text-center shadow-2xl">
+        <h3 class="text-xl font-bold mb-1">Delete Team</h3>
+        <p class="text-gray-400 text-xs mb-5">Enter admin password to confirm</p>
+
+        <input type="password" id="delete-password"
+               class="w-full p-3 bg-gray-900 rounded-lg mb-3 text-white
+                      outline-none border border-gray-700 focus:border-red-500
+                      transition text-center tracking-widest"
+               placeholder="Password" maxlength="32" />
+
+        <p id="delete-error"
+           class="text-red-400 text-xs mb-3 hidden"></p>
+
+        <div class="flex gap-3">
+            <button onclick="closeDeleteModal()"
+                    class="flex-1 p-3 rounded-lg bg-gray-700 hover:bg-gray-600
+                           transition font-bold text-sm">
+                Cancel
+            </button>
+            <button onclick="confirmDelete()"
+                    class="flex-1 p-3 rounded-lg bg-red-600 hover:bg-red-700
+                           transition font-bold text-sm">
+                Delete
+            </button>
+        </div>
+    </div>
 </div>
 
 <script>
 const socket = io("https://Aloharean-Tug-Of-Quiz.hf.space");
 
-// ── Create Team ──────────────────────────────────────────────────
+// ── Create Team ──────────────────────────────────────────────────────
 function createTeam() {
     const input = document.getElementById("t-name");
     const name  = input.value.trim();
     if (!name) { input.focus(); return; }
-
     socket.emit("hub-create-team", { name });
     input.value = "";
     input.focus();
@@ -123,17 +152,60 @@ socket.on("team-created", (data) => {
     setTimeout(() => box.classList.add("hidden"), 10000);
 });
 
-// ── Delete Team ──────────────────────────────────────────────────
+// ── Delete Team (password modal) ─────────────────────────────────────
+let pendingDeleteID = null;
+
 function delTeam(id) {
-    if (!confirm(`Delete team ${id}?`)) return;
-    socket.emit("hub-delete-team", id);
-    if (localStorage.getItem("currentTeamID") === id) {
-        localStorage.removeItem("currentTeamID");
-        localStorage.removeItem("currentTeamName");
-    }
+    pendingDeleteID = id;
+    document.getElementById("delete-password").value = "";
+    document.getElementById("delete-error").classList.add("hidden");
+    const modal = document.getElementById("delete-modal");
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+    setTimeout(() => document.getElementById("delete-password").focus(), 50);
 }
 
-// ── Leaderboard Update ───────────────────────────────────────────
+function closeDeleteModal() {
+    pendingDeleteID = null;
+    const modal = document.getElementById("delete-modal");
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+}
+
+function confirmDelete() {
+    const password = document.getElementById("delete-password").value;
+    if (!password) return;
+    socket.emit("hub-delete-team", { id: pendingDeleteID, password });
+}
+
+// Close modal on backdrop click
+document.getElementById("delete-modal")
+    .addEventListener("click", function(e) {
+        if (e.target === this) closeDeleteModal();
+    });
+
+// Enter key in password field
+document.getElementById("delete-password")
+    .addEventListener("keydown", e => { if (e.key === "Enter") confirmDelete(); });
+
+socket.on("delete-response", (res) => {
+    if (res.success) {
+        // Clear localStorage if it was their team
+        if (localStorage.getItem("currentTeamID") === res.id) {
+            localStorage.removeItem("currentTeamID");
+            localStorage.removeItem("currentTeamName");
+        }
+        closeDeleteModal();
+    } else {
+        const errEl = document.getElementById("delete-error");
+        errEl.textContent = res.message;
+        errEl.classList.remove("hidden");
+        document.getElementById("delete-password").value = "";
+        document.getElementById("delete-password").focus();
+    }
+});
+
+// ── Leaderboard ──────────────────────────────────────────────────────
 socket.on("update-leaderboard", (teams) => {
     renderTeamList(teams);
     renderLeaderboard(teams);
@@ -157,60 +229,55 @@ function renderTeamList(teams) {
             </div>
             <button onclick="delTeam('${t.id}')"
                     class="text-red-500 hover:text-red-300 text-xs
-                           font-bold transition">✕</button>
+                           font-bold transition ml-2 shrink-0">✕</button>
         </div>
     `).join("");
 }
 
-function fmtTime(seconds) {
-    // Format seconds → "4m 23s" or "59s"
-    if (!seconds || seconds === 0) return "0s";
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return m > 0 ? `${m}m ${s}s` : `${s}s`;
-}
-
 function renderLeaderboard(teams) {
     const board  = document.getElementById("leaderboard");
-    // Sort: teams with matches played first, by avgTime asc,
-    // tiebreak matchesWon desc
     const sorted = Object.values(teams).sort((a, b) => {
-        // Push zero-match teams to bottom
+        // Teams with matches played first, ranked by score desc
         if (a.matchesPlayed === 0 && b.matchesPlayed === 0) return 0;
         if (a.matchesPlayed === 0) return 1;
         if (b.matchesPlayed === 0) return -1;
-        if (a.avgTime !== b.avgTime) return a.avgTime - b.avgTime;
+        if (b.score !== a.score) return b.score - a.score;
         return b.matchesWon - a.matchesWon;
     });
 
-    const medals = ["🥇", "🥈", "🥉"];
+    const medals = ["🥇","🥈","🥉"];
 
     board.innerHTML = sorted.map((t, i) => {
-        const hasPlayed = t.matchesPlayed > 0;
-        const avgStr    = hasPlayed ? fmtTime(t.avgTime)      : "—";
-        const timeStr   = hasPlayed ? fmtTime(t.totalInTime)  : "—";
-        const isTop     = i === 0 && hasPlayed;
+        const played  = t.matchesPlayed > 0;
+        const avgStr  = played ? fmtTime(t.avgTime)  : "—";
+        const scoreStr= played || t.totalAnswers > 0
+            ? Math.round(t.score) : "—";
+        const isTop   = i === 0 && played;
 
         return `
-        <div class="grid grid-cols-4 items-center
-                    bg-black/30 px-2 py-2 rounded-lg text-sm
+        <div class="grid grid-cols-6 items-center gap-1
+                    bg-black/30 px-2 py-2 rounded-lg text-xs
                     ${isTop ? "border border-yellow-500/40" : ""}">
-            <div class="flex items-center gap-1 min-w-0">
-                <span class="text-base shrink-0">
-                    ${medals[i] ?? "  "}
-                </span>
+            <div class="col-span-2 flex items-center gap-1 min-w-0">
+                <span class="shrink-0 text-sm">${medals[i] ?? ""}</span>
                 <span class="font-semibold truncate"
                       title="${esc(t.name)}">${esc(t.name)}</span>
             </div>
             <span class="text-center font-bold text-green-400">
                 ${t.matchesWon}
             </span>
-            <span class="text-center text-gray-300 text-xs">${timeStr}</span>
-            <span class="text-center text-yellow-400 font-bold text-xs">
-                ${avgStr}
-            </span>
+            <span class="text-center text-gray-400">${avgStr}</span>
+            <span class="text-center text-blue-300">${t.totalAnswers}</span>
+            <span class="text-center text-yellow-400 font-bold">${scoreStr}</span>
         </div>`;
     }).join("");
+}
+
+function fmtTime(seconds) {
+    if (!seconds) return "0s";
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return m > 0 ? `${m}m ${s}s` : `${s}s`;
 }
 
 function esc(str) {
