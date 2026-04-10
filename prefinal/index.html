@@ -1072,7 +1072,7 @@ function drawGoalLines(cx) {
 function drawSprites(cx, cy) {
     const rx = cx + game.ropeX;
 
-    // Red players — left of knot, inward first, normal orientation
+    // Red — left of knot, no transform needed
     game.redSprites.forEach((gender, i) => {
         const img = sprites["red-" + gender];
         if (!img.complete || !img.naturalWidth) return;
@@ -1082,17 +1082,21 @@ function drawSprites(cx, cy) {
         ctx.drawImage(img, x, y, SPRITE_W, SPRITE_H);
     });
 
-    // Blue players — right of knot, inward first, flipped horizontally
+    // Blue — right of knot, flipped horizontally
     game.blueSprites.forEach((gender, i) => {
         const img = sprites["blue-" + gender];
         if (!img.complete || !img.naturalWidth) return;
 
-        const x = rx - SPRITE_ROPE_GAP - SPRITE_W - i * (SPRITE_W + SPRITE_GAP);
+        // x is the left edge of where this sprite slot starts
+        // going rightward from the knot
+        const x = rx + SPRITE_ROPE_GAP + i * (SPRITE_W + SPRITE_GAP);
         const y = cy + SPRITE_OFFSET_Y - SPRITE_H / 2;
 
         ctx.save();
+        // Flip around the centre of this specific sprite
+        ctx.translate(x + SPRITE_W / 2, 0);
         ctx.scale(-1, 1);
-        ctx.drawImage(img, -(x + SPRITE_W), y, SPRITE_W, SPRITE_H);
+        ctx.drawImage(img, -SPRITE_W / 2, y, SPRITE_W, SPRITE_H);
         ctx.restore();
     });
 }
