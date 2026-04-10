@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" href="https://fav.farm/🪢" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tug Of Quiz — Arena</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: sans-serif;
+            background: #0a1628;
+            color: white;
+            overflow: hidden;
+        }
+        #root {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        :root {
+            --panel-h: 110px;
+            --hud-h:    36px;
+        }
+
+        /* ── Question panels ────────────────────────────────────── */
+        .panel {
+            width: 100%;
+            height: var(--panel-h);
+            flex-shrink: 0;
+            display: none;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            padding: 0 32px;
+            gap: 18px;
+            z-index: 10;
+        }
+        #panel-red {
+            order: 0;
+            background: rgba(239,68,68,0.08);
+            border-bottom: 2px solid rgba(239,68,68,0.35);
+        }
+        #panel-blue {
+            order: 3;
+            background: rgba(59,130,246,0.08);
+            border-top: 2px solid rgba(59,130,246,0.35);
+        }
+
+        .team-label {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 3px 10px;
+            border-radius: 99px;
+            margin-bottom: 4px;
+        }
+        .team-label.red  { background: rgba(239,68,68,0.2);  color: #fca5a5; }
+        .team-label.blue { background: rgba(59,130,246,0.2); color: #93c5fd; }
+
+        .q-text {
+            font-size: 17px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 260px;
+        }
+
+        .ans-input {
+            width: 240px;
+            border: 2px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            padding: 9px 14px;
+            font-size: 17px;
+            text-align: center;
+            background: rgba(255,255,255,0.06);
+            color: white;
+            outline: none;
+            transition: border-color 0.18s, background 0.18s;
+            flex-shrink: 0;
+        }
+        .ans-input.red:focus  {
+            border-color: #ef4444;
+            background: rgba(239,68,68,0.09);
+        }
+        .ans-input.blue:focus {
+            border-color: #3b82f6;
+            background: rgba(59,130,246,0.09);
+        }
+        .ans-input.flash-correct {
+            border-color: #22c55e !important;
+            background: rgba(34,197,94,0.14) !important;
+        }
+        .ans-input.flash-wrong {
+            border-color: #f97316 !important;
+            background: rgba(249,115,22,0.10) !important;
+        }
+
+        /* ── HUD ────────────────────────────────────────────────── */
+        #hud {
+            order: 1;
+            width: 100%;
+            height: var(--hud-h);
+            flex-shrink: 0;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            background: rgba(0,0,0,0.45);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            z-index: 10;
+        }
+        #hud-score {
+            font-size: 15px;
+            font-weight: 900;
+            letter-spacing: 0.04em;
+        }
+        #hud-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.1;
+        }
+        #hud-theme {
+            font-size: 11px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        #hud-timer {
+            font-family: monospace;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+        }
+
+        /* ── Timer bar ──────────────────────────────────────────── */
+        #timer-bar {
+            position: absolute;
+            top: calc(var(--panel-h) + var(--hud-h) - 3px);
+            left: 0; right: 0;
+            height: 3px;
+            background: rgba(255,255,255,0.06);
+            z-index: 11;
+            display: none;
+        }
+        #timer-fill {
+            height: 100%;
+            width: 100%;
+            background: #22c55e;
+            transition: width 0.9s linear, background 0.5s;
+        }
+
+        /* ── Canvas ─────────────────────────────────────────────── */
+        #stage-wrap {
+            order: 2;
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        #stage { display: block; width: 100%; height: 100%; }
+
+        /* ── Overlays ───────────────────────────────────────────── */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            background: rgba(10,18,40,0.97);
+        }
+
+        .std-input {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.18);
+            padding: 11px 16px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            text-align: center;
+            font-size: 16px;
+            color: white;
+            outline: none;
+            width: 290px;
+            transition: border-color 0.2s;
+        }
+        .std-input:focus { border-color: #3b82f6; }
+
+        .big-btn {
+            padding: 12px 44px;
+            border-radius: 99px;
+            font-weight: 900;
+            font-size: 16px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: opacity 0.15s, transform 0.1s;
+        }
+        .big-btn:hover  { opacity: 0.87; }
+        .big-btn:active { transform: scale(0.97); }
+
+        /* ── Ready button ───────────────────────────────────────── */
+        #ready-btn {
+            padding: 16px 52px;
+            border-radius: 99px;
+            font-weight: 900;
+            font-size: 20px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            background: #16a34a;
+            color: white;
+            border: 3px solid #22c55e;
+            transition: all 0.15s;
+            box-shadow: 0 0 28px rgba(34,197,94,0.35);
+            margin-top: 8px;
+        }
+        #ready-btn:hover  {
+            background: #15803d;
+            box-shadow: 0 0 44px rgba(34,197,94,0.5);
+        }
+        #ready-btn:active { transform: scale(0.96); }
+        #ready-btn.pressed {
+            background: #064e3b;
+            border-color: #059669;
+            color: #6ee7b7;
+            cursor: default;
+            box-shadow: none;
+        }
+
+        /* ── Theme voting grid ──────────────────────────────────── */
+        #theme-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            width: 480px;
+            margin: 16px 0 20px;
+        }
+
+        /* Last theme card centred if odd count */
+        #theme-grid .theme-card:last-child:nth-child(odd) {
+            grid-column: 1 / -1;
+            justify-self: center;
+            width: calc(50% - 5px);
+        }
+
+        .theme-card {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.18s;
+            user-select: none;
+        }
+        .theme-card:hover {
+            background: rgba(255,255,255,0.09);
+            border-color: rgba(255,255,255,0.25);
+        }
+        .theme-card.selected {
+            border-color: #22c55e;
+            background: rgba(34,197,94,0.12);
+        }
+        .theme-card.locked {
+            /* voted and readied — no more changes */
+            opacity: 0.7;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .theme-card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+        .theme-name {
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .theme-emoji { font-size: 18px; }
+
+        /* Vote bar */
+        .vote-bar-wrap {
+            height: 4px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 99px;
+            overflow: hidden;
+        }
+        .vote-bar-fill {
+            height: 100%;
+            background: #22c55e;
+            border-radius: 99px;
+            transition: width 0.3s;
+        }
+        .vote-count {
+            font-size: 10px;
+            color: #6b7280;
+            margin-top: 3px;
+            text-align: right;
+        }
+
+        /* ── Toast ──────────────────────────────────────────────── */
+        #toast {
+            position: fixed;
+            bottom: 130px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(234,179,8,0.15);
+            border: 1px solid rgba(234,179,8,0.4);
+            color: #fde047;
+            padding: 8px 20px;
+            border-radius: 99px;
+            font-size: 13px;
+            font-weight: 600;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.25s, transform 0.25s;
+            z-index: 30;
+            white-space: nowrap;
+        }
+        #toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+<div id="root">
+
+    <!-- ── Red panel ─────────────────────────────────────────── -->
+    <div class="panel" id="panel-red">
+        <div class="shrink-0 text-center">
+            <div class="team-label red" id="name-red">Red Team</div>
+            <div class="q-text"        id="q-red">—</div>
+        </div>
+        <input class="ans-input red" id="inp-red"
+               type="text" placeholder="Answer…" autocomplete="off" />
+    </div>
+
+    <!-- ── HUD ───────────────────────────────────────────────── -->
+    <div id="hud">
+        <span id="hud-score">— vs —</span>
+        <div id="hud-center">
+            <span id="hud-theme"></span>
+            <span id="hud-timer">3:00</span>
+        </div>
+        <span style="width:160px"></span><!-- spacer to balance score -->
+    </div>
+
+    <!-- ── Canvas ────────────────────────────────────────────── -->
+    <div id="stage-wrap">
+        <canvas id="stage"></canvas>
+    </div>
+
+    <!-- ── Timer bar ─────────────────────────────────────────── -->
+    <div id="timer-bar"><div id="timer-fill"></div></div>
+
+    <!-- ── Blue panel ────────────────────────────────────────── -->
+    <div class="panel" id="panel-blue">
+        <div class="shrink-0 text-center">
+            <div class="team-label blue" id="name-blue">Blue Team</div>
+            <div class="q-text"         id="q-blue">—</div>
+        </div>
+        <input class="ans-input blue" id="inp-blue"
+               type="text" placeholder="Answer…" autocomplete="off" />
+    </div>
+
+    <!-- ── Toast ─────────────────────────────────────────────── -->
+    <div id="toast"></div>
+
+    <!-- ════════════════════════════════════════════════════════
+         SCREEN 1 — Setup
+    ════════════════════════════════════════════════════════ -->
+    <div class="overlay" id="screen-setup">
+        <h1 class="text-5xl font-black text-blue-400 mb-1 italic uppercase">
+            Arena Entry
+        </h1>
+        <p class="text-gray-500 text-xs tracking-widest uppercase mb-8">
+            Set up your player, then join a room
+        </p>
+        <input type="text" id="inp-player-name" class="std-input"
+               placeholder="Your Player Name" maxlength="20" />
+        <input type="text" id="inp-room"        class="std-input"
+               placeholder="Room ID  (e.g. MATH1)" />
+        <input type="text" id="inp-team-id"     class="std-input"
+               placeholder="Team ID  (from Hub)" />
+        <p id="setup-error"
+           class="text-red-400 text-sm mb-3 hidden text-center w-72"></p>
+        <button class="big-btn bg-blue-600 text-white" onclick="submitJoin()">
+            Join Match
+        </button>
+        <a href="../index.html"
+           class="mt-5 text-gray-600 text-xs hover:text-gray-300 transition">
+            ← Back to Hub
+        </a>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         SCREEN 2 — Lobby / Vote / Ready
+    ════════════════════════════════════════════════════════ -->
+    <div class="overlay" id="screen-lobby" style="display:none;">
+        <p id="lobby-round-label"
+           class="text-gray-500 text-xs uppercase tracking-widest mb-5">
+            Round 1 — Vote for a theme &amp; ready up
+        </p>
+
+        <!-- Teams -->
+        <div class="flex gap-12 mb-6">
+            <div class="text-center">
+                <div class="team-label red inline-block mb-2"
+                     id="lobby-red-name">Red Team</div>
+                <div id="lobby-red-players"
+                     class="space-y-1 min-h-[48px]"></div>
+            </div>
+            <div class="text-gray-600 text-3xl font-black self-center">VS</div>
+            <div class="text-center">
+                <div class="team-label blue inline-block mb-2"
+                     id="lobby-blue-name">Blue Team</div>
+                <div id="lobby-blue-players"
+                     class="space-y-1 min-h-[48px]"></div>
+            </div>
+        </div>
+
+        <!-- Theme voting -->
+        <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">
+            Vote for this round's theme
+        </p>
+        <div id="theme-grid">
+            <!-- Populated by buildThemeGrid() -->
+        </div>
+
+        <!-- Ready -->
+        <button id="ready-btn" onclick="sendReady()">✅ Ready</button>
+        <p id="lobby-status"
+           class="text-gray-500 text-sm mt-4 animate-pulse text-center">
+            Vote for a theme, then click Ready
+        </p>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         SCREEN 3 — Round End
+    ════════════════════════════════════════════════════════ -->
+    <div class="overlay" id="screen-round-end" style="display:none;">
+        <p id="re-round-label"
+           class="text-gray-500 text-xs uppercase tracking-widest mb-1">
+            Round 1
+        </p>
+        <p id="re-theme"
+           class="text-gray-600 text-xs uppercase tracking-widest mb-3">
+        </p>
+        <h2 class="text-6xl font-black italic mb-3" id="re-title">—</h2>
+        <p class="text-xl text-gray-300"      id="re-score">—</p>
+        <p class="text-gray-600 text-sm mt-8">Returning to ready room…</p>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         SCREEN 4 — Match Over
+    ════════════════════════════════════════════════════════ -->
+    <div class="overlay" id="screen-match-over" style="display:none;">
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">
+            Match Over
+        </p>
+        <h2 class="text-7xl font-black italic mb-4" id="mo-title">—</h2>
+        <p class="text-2xl text-gray-300 mb-1"  id="mo-score">—</p>
+        <p class="text-gray-500 text-sm mb-10"  id="mo-time">—</p>
+        <div class="flex gap-4">
+            <button class="big-btn bg-white text-black" onclick="playAgain()">
+                Play Again
+            </button>
+            <a href="../index.html"
+               class="big-btn bg-gray-700 text-white flex items-center">
+                ← Hub
+            </a>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         SCREEN 5 — Paused
+    ════════════════════════════════════════════════════════ -->
+    <div class="overlay" id="screen-paused" style="display:none;">
+        <div class="text-5xl mb-4">⏸</div>
+        <h2 class="text-2xl font-bold mb-2">Match Paused</h2>
+        <p id="pause-msg" class="text-gray-400 text-center max-w-xs"></p>
+    </div>
+
+</div><!-- #root -->
+
+<script>
+// ─────────────────────────────────────────────
+//  Socket + Canvas
+// ─────────────────────────────────────────────
+const socket    = io("https://Aloharean-Tug-Of-Quiz.hf.space");
+const stageWrap = document.getElementById("stage-wrap");
+const canvas    = document.getElementById("stage");
+const ctx       = canvas.getContext("2d");
+let W = 0, H = 0;
+
+function resize() {
+    W = canvas.width  = stageWrap.clientWidth;
+    H = canvas.height = stageWrap.clientHeight;
+}
+window.addEventListener("resize", resize);
+
+// ─────────────────────────────────────────────
+//  State
+// ─────────────────────────────────────────────
+let mySide           = null;
+let animating        = false;
+let alreadyReady     = false;
+let myVotedTheme     = null;     // this player's current vote
+let votingLocked     = false;    // true after player clicks Ready
+let availableThemes  = [];
+let themeEmojis      = {};
+let currentTally     = {};       // theme → vote count
+let totalVoters      = 0;        // total players in room (for bar %)
+
+const game = {
+    active:       false,
+    ropeX:        0,
+    targetRopeX:  0,
+    winLimit:     250,
+    redScore:     0,
+    blueScore:    0,
+    redCount:     0,
+    blueCount:    0,
+    currentQ:     null,
+    redName:      "Red Team",
+    blueName:     "Blue Team",
+    totalSeconds: 180,
+    secondsLeft:  180,
+    currentTheme: "",
+    themeEmoji:   "",
+};
+
+// ─────────────────────────────────────────────
+//  Screens
+// ─────────────────────────────────────────────
+const SCREENS = [
+    "screen-setup","screen-lobby","screen-round-end",
+    "screen-match-over","screen-paused",
+];
+function showScreen(id) {
+    SCREENS.forEach(s => {
+        document.getElementById(s).style.display =
+            s === id ? "flex" : "none";
+    });
+}
+
+// ─────────────────────────────────────────────
+//  Init
+// ─────────────────────────────────────────────
+window.addEventListener("load", () => {
+    resize();
+    const savedID = localStorage.getItem("currentTeamID");
+    if (savedID) document.getElementById("inp-team-id").value = savedID;
+    showScreen("screen-setup");
+
+    ["inp-player-name","inp-room","inp-team-id"].forEach(id => {
+        document.getElementById(id)
+            .addEventListener("keydown", e => {
+                if (e.key === "Enter") submitJoin();
+            });
+    });
+});
+
+// ─────────────────────────────────────────────
+//  Join
+// ─────────────────────────────────────────────
+function submitJoin() {
+    const playerName = document.getElementById("inp-player-name").value.trim();
+    const room       = document.getElementById("inp-room").value.trim().toUpperCase();
+    const teamID     = document.getElementById("inp-team-id").value.trim().toUpperCase();
+    const errEl      = document.getElementById("setup-error");
+    errEl.classList.add("hidden");
+
+    if (!playerName) return showErr(errEl, "Please enter your player name.");
+    if (!room)       return showErr(errEl, "Please enter a Room ID.");
+    if (!teamID)     return showErr(errEl, "Please enter your Team ID.");
+
+    socket.emit("join-attempt", { room, teamID, playerName });
+}
+
+function showErr(el, msg) {
+    el.textContent = msg;
+    el.classList.remove("hidden");
+}
+
+// ─────────────────────────────────────────────
+//  Theme Voting UI
+// ─────────────────────────────────────────────
+function buildThemeGrid(themes, emojis) {
+    availableThemes = themes;
+    themeEmojis     = emojis;
+    const grid      = document.getElementById("theme-grid");
+
+    grid.innerHTML = themes.map(t => `
+        <div class="theme-card ${myVotedTheme === t ? "selected" : ""}
+                    ${votingLocked ? "locked" : ""}"
+             id="tc-${slugify(t)}"
+             onclick="castVote('${t.replace(/'/g,"\\'")}')">
+            <div class="theme-card-top">
+                <span class="theme-name">${esc(t)}</span>
+                <span class="theme-emoji">${emojis[t] || "❓"}</span>
+            </div>
+            <div class="vote-bar-wrap">
+                <div class="vote-bar-fill" id="vb-${slugify(t)}"
+                     style="width:0%"></div>
+            </div>
+            <div class="vote-count" id="vc-${slugify(t)}">0 votes</div>
+        </div>
+    `).join("");
+}
+
+function updateThemeGrid(tally, total) {
+    currentTally = tally;
+    totalVoters  = total;
+
+    availableThemes.forEach(t => {
+        const slug   = slugify(t);
+        const count  = tally[t] || 0;
+        const pct    = total > 0 ? (count / total) * 100 : 0;
+
+        const bar    = document.getElementById("vb-" + slug);
+        const label  = document.getElementById("vc-" + slug);
+        const card   = document.getElementById("tc-" + slug);
+
+        if (bar)   bar.style.width = pct + "%";
+        if (label) label.textContent =
+            count === 1 ? "1 vote" : `${count} votes`;
+        if (card) {
+            card.classList.toggle("selected", myVotedTheme === t);
+            card.classList.toggle("locked",   votingLocked);
+        }
+    });
+}
+
+function castVote(theme) {
+    if (votingLocked) return;
+    if (!availableThemes.includes(theme)) return;
+
+    myVotedTheme = theme;
+    socket.emit("vote-theme", { theme });
+
+    // Optimistic local highlight
+    availableThemes.forEach(t => {
+        const card = document.getElementById("tc-" + slugify(t));
+        if (card) card.classList.toggle("selected", t === theme);
+    });
+}
+
+function slugify(str) {
+    return str.replace(/[^a-zA-Z0-9]/g, "_");
+}
+
+// ─────────────────────────────────────────────
+//  Socket Events
+// ─────────────────────────────────────────────
+socket.on("join-response", (res) => {
+    if (!res.success) {
+        return showErr(document.getElementById("setup-error"), res.message);
+    }
+
+    mySide        = res.side;
+    game.redName  = res.redName;
+    game.blueName = res.blueName;
+
+    document.getElementById("name-red").textContent  = res.redName;
+    document.getElementById("name-blue").textContent = res.blueName;
+    document.getElementById("lobby-red-name").textContent  = res.redName;
+    document.getElementById("lobby-blue-name").textContent = res.blueName;
+
+    // Build initial theme grid
+    buildThemeGrid(res.availableThemes, res.themeEmojis);
+
+    showScreen("screen-lobby");
+});
+
+socket.on("lobby-update", (data) => {
+    game.redCount  = data.redPlayers.length;
+    game.blueCount = data.bluePlayers.length;
+    totalVoters    = data.redPlayers.length + data.bluePlayers.length;
+
+    renderLobbyList("lobby-red-players",  data.redPlayers,  "red");
+    renderLobbyList("lobby-blue-players", data.bluePlayers, "blue");
+});
+
+socket.on("vote-update", (data) => {
+    updateThemeGrid(data.tally, totalVoters);
+});
+
+socket.on("ready-blocked", (data) => {
+    showToast("⚠️ " + data.message);
+    // Shake the theme grid to draw attention
+    const grid = document.getElementById("theme-grid");
+    grid.style.outline = "2px solid #ef4444";
+    setTimeout(() => grid.style.outline = "none", 1200);
+});
+
+socket.on("go-to-ready", (data) => {
+    game.redName  = data.redName;
+    game.blueName = data.blueName;
+
+    // Reset voting state
+    alreadyReady  = false;
+    myVotedTheme  = null;
+    votingLocked  = false;
+
+    const btn = document.getElementById("ready-btn");
+    btn.classList.remove("pressed");
+    btn.textContent = "✅ Ready";
+
+    document.getElementById("lobby-round-label").textContent =
+        `Round ${data.round} — Vote for a theme & ready up`;
+    document.getElementById("lobby-status").textContent =
+        "Vote for a theme, then click Ready";
+    document.getElementById("lobby-red-name").textContent  = data.redName;
+    document.getElementById("lobby-blue-name").textContent = data.blueName;
+
+    // Rebuild theme grid with remaining themes
+    buildThemeGrid(data.availableThemes, data.themeEmojis);
+    updateThemeGrid({}, 0);
+
+    // Hide game chrome
+    document.getElementById("panel-red").style.display  = "none";
+    document.getElementById("panel-blue").style.display = "none";
+    document.getElementById("hud").style.display        = "none";
+    document.getElementById("timer-bar").style.display  = "none";
+
+    setTimeout(() => showScreen("screen-lobby"), 3000);
+});
+
+socket.on("start-round", (data) => {
+    game.active       = true;
+    game.redScore     = data.redScore;
+    game.blueScore    = data.blueScore;
+    game.redName      = data.redName;
+    game.blueName     = data.blueName;
+    game.totalSeconds = data.duration;
+    game.secondsLeft  = data.duration;
+    game.winLimit     = data.winLimit;
+    game.currentTheme = data.theme;
+    game.themeEmoji   = data.themeEmoji;
+
+    // Hard reset rope
+    game.ropeX       = 0;
+    game.targetRopeX = 0;
+
+    document.getElementById("name-red").textContent  = data.redName;
+    document.getElementById("name-blue").textContent = data.blueName;
+
+    updateHUD();
+
+    document.getElementById("panel-" + mySide).style.display = "flex";
+    document.getElementById("hud").style.display              = "flex";
+    document.getElementById("timer-bar").style.display        = "block";
+    setTimerFill(data.duration, data.duration);
+
+    showScreen(null);
+
+    if (!animating) {
+        animating = true;
+        resize();
+        requestAnimationFrame(animate);
+    }
+
+    document.getElementById("inp-" + mySide).focus();
+});
+
+socket.on("your-question", (q) => {
+    game.currentQ = q;
+    document.getElementById("q-" + mySide).textContent = q.q;
+    const inp = document.getElementById("inp-" + mySide);
+    inp.value = "";
+    inp.focus();
+});
+
+socket.on("rope-moved", (data) => {
+    game.targetRopeX = data.ropeX;
+});
+
+socket.on("round-tick", (data) => {
+    game.secondsLeft = data.secondsLeft;
+    setTimerFill(data.secondsLeft, game.totalSeconds);
+    updateHUD();
+});
+
+socket.on("round-end", (data) => {
+    game.active    = false;
+    game.redScore  = data.redScore;
+    game.blueScore = data.blueScore;
+
+    document.getElementById("re-round-label").textContent =
+        `Round ${data.round}`;
+    document.getElementById("re-theme").textContent =
+        (game.themeEmoji ? game.themeEmoji + " " : "") + data.theme;
+
+    const title = document.getElementById("re-title");
+    const score = document.getElementById("re-score");
+
+    if (data.draw) {
+        title.textContent = "DRAW!";
+        title.style.color = "#9ca3af";
+    } else {
+        title.textContent = data.winnerName + " wins!";
+        title.style.color = data.winner === "red" ? "#ef4444" : "#3b82f6";
+    }
+    score.textContent =
+        `${data.redName}  ${data.redScore} — ${data.blueScore}  ${data.blueName}`;
+
+    showScreen("screen-round-end");
+});
+
+socket.on("match-over", (data) => {
+    game.active = false;
+    animating   = false;
+
+    const title = document.getElementById("mo-title");
+    const score = document.getElementById("mo-score");
+    const time  = document.getElementById("mo-time");
+
+    if (data.draw) {
+        title.textContent = "DRAW!";
+        title.style.color = "#9ca3af";
+    } else {
+        title.textContent = data.winnerName + " Wins!";
+        title.style.color = data.winner === "red" ? "#ef4444" : "#3b82f6";
+    }
+    score.textContent =
+        `${data.redName}  ${data.redScore} — ${data.blueScore}  ${data.blueName}`;
+    time.textContent  = `Total round time: ${fmtTime(data.inTime)}`;
+
+    showScreen("screen-match-over");
+});
+
+socket.on("match-paused", (data) => {
+    game.active = false;
+    document.getElementById("pause-msg").textContent = data.message;
+    showScreen("screen-paused");
+});
+
+socket.on("question-skipped", () => {
+    showToast("❓ Question changed — answer faster!");
+});
+
+// ─────────────────────────────────────────────
+//  Ready
+// ─────────────────────────────────────────────
+function sendReady() {
+    if (alreadyReady) return;
+    // Vote check is enforced server-side too, but give instant feedback
+    if (!myVotedTheme) {
+        showToast("⚠️ Vote for a theme first!");
+        const grid = document.getElementById("theme-grid");
+        grid.style.outline = "2px solid #ef4444";
+        setTimeout(() => grid.style.outline = "none", 1200);
+        return;
+    }
+
+    alreadyReady = true;
+    votingLocked = true;
+
+    // Lock cards visually
+    availableThemes.forEach(t => {
+        const card = document.getElementById("tc-" + slugify(t));
+        if (card) card.classList.add("locked");
+    });
+
+    const btn = document.getElementById("ready-btn");
+    btn.classList.add("pressed");
+    btn.textContent = "✅ Waiting…";
+    document.getElementById("lobby-status").textContent =
+        "Waiting for other players…";
+
+    socket.emit("player-ready");
+}
+
+document.addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    const lobbyVisible =
+        document.getElementById("screen-lobby").style.display !== "none";
+    if (lobbyVisible && !alreadyReady) sendReady();
+});
+
+// ─────────────────────────────────────────────
+//  Answer Check
+// ─────────────────────────────────────────────
+function checkAns() {
+    if (!game.active || !game.currentQ) return;
+    const inp     = document.getElementById("inp-" + mySide);
+    const userAns = inp.value.trim().toLowerCase();
+    const correct = game.currentQ.a.toString().toLowerCase();
+
+    if (userAns === correct) {
+        flashInput(inp, "flash-correct");
+        socket.emit("pull");
+        inp.value = "";
+    } else {
+        flashInput(inp, "flash-wrong");
+        inp.value = "";
+        inp.focus();
+    }
+}
+
+function flashInput(inp, cls) {
+    inp.classList.add(cls);
+    setTimeout(() => inp.classList.remove(cls), 350);
+}
+
+document.getElementById("inp-red")
+    .addEventListener("keydown", e => { if (e.key === "Enter") checkAns(); });
+document.getElementById("inp-blue")
+    .addEventListener("keydown", e => { if (e.key === "Enter") checkAns(); });
+
+// ─────────────────────────────────────────────
+//  Play Again
+// ─────────────────────────────────────────────
+function playAgain() {
+    alreadyReady     = false;
+    myVotedTheme     = null;
+    votingLocked     = false;
+    mySide           = null;
+    animating        = false;
+    game.active      = false;
+    game.ropeX       = 0;
+    game.targetRopeX = 0;
+    game.redScore    = 0;
+    game.blueScore   = 0;
+
+    document.getElementById("panel-red").style.display  = "none";
+    document.getElementById("panel-blue").style.display = "none";
+    document.getElementById("hud").style.display        = "none";
+    document.getElementById("timer-bar").style.display  = "none";
+
+    const btn = document.getElementById("ready-btn");
+    btn.classList.remove("pressed");
+    btn.textContent = "✅ Ready";
+
+    showScreen("screen-setup");
+}
+
+// ─────────────────────────────────────────────
+//  HUD
+// ─────────────────────────────────────────────
+function updateHUD() {
+    const scoreEl = document.getElementById("hud-score");
+    const themeEl = document.getElementById("hud-theme");
+    const timerEl = document.getElementById("hud-timer");
+
+    scoreEl.innerHTML =
+        `<span style="color:#f87171">${esc(game.redName)}</span>` +
+        `<span style="color:#6b7280;margin:0 8px">` +
+            `${game.redScore} — ${game.blueScore}` +
+        `</span>` +
+        `<span style="color:#60a5fa">${esc(game.blueName)}</span>`;
+
+    themeEl.textContent =
+        game.themeEmoji + " " + game.currentTheme;
+
+    const s   = game.secondsLeft;
+    const m   = Math.floor(s / 60);
+    const sec = String(s % 60).padStart(2, "0");
+    timerEl.textContent = `${m}:${sec}`;
+    timerEl.style.color =
+        s > 60 ? "#d1d5db" :
+        s > 20 ? "#facc15" : "#ef4444";
+}
+
+function setTimerFill(left, total) {
+    const pct  = Math.max(0, left / total) * 100;
+    const fill = document.getElementById("timer-fill");
+    fill.style.width = pct + "%";
+    fill.style.background =
+        pct > 50 ? "#22c55e" :
+        pct > 20 ? "#eab308" : "#ef4444";
+}
+
+// ─────────────────────────────────────────────
+//  Lobby
+// ─────────────────────────────────────────────
+function renderLobbyList(elId, players, side) {
+    const el  = document.getElementById(elId);
+    const bg  = side === "red"
+        ? "rgba(239,68,68,0.12)" : "rgba(59,130,246,0.12)";
+    const col = side === "red" ? "text-red-300" : "text-blue-300";
+
+    if (!players.length) {
+        el.innerHTML = `<p class="text-gray-600 text-xs">Waiting…</p>`;
+        return;
+    }
+    el.innerHTML = players.map(p => `
+        <div class="flex items-center gap-2 px-3 py-1 rounded-lg text-sm"
+             style="background:${bg}">
+            <span class="${col} font-semibold">${esc(p.name)}</span>
+            <span class="ml-auto text-xs">
+                ${p.ready ? "✅" : p.voted ? "🗳️" : "⏳"}
+            </span>
+        </div>
+    `).join("");
+}
+
+// ─────────────────────────────────────────────
+//  Toast
+// ─────────────────────────────────────────────
+function showToast(msg) {
+    const toast = document.getElementById("toast");
+    toast.textContent = msg;
+    toast.classList.add("show");
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove("show"), 3000);
+}
+
+// ─────────────────────────────────────────────
+//  Utilities
+// ─────────────────────────────────────────────
+function fmtTime(seconds) {
+    if (!seconds) return "0s";
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+function esc(str) {
+    return String(str)
+        .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;").replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+}
+
+// ─────────────────────────────────────────────
+//  Drawing
+// ─────────────────────────────────────────────
+function drawGrid() {
+    ctx.strokeStyle = "rgba(255,255,255,0.025)";
+    ctx.lineWidth   = 1;
+    for (let x = 0; x < W; x += 60) {
+        ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
+    }
+    for (let y = 0; y < H; y += 60) {
+        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+    }
+}
+
+function drawGoalLines(cx, cy) {
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 8]);
+
+    ctx.strokeStyle = "rgba(239,68,68,0.45)";
+    ctx.beginPath();
+    ctx.moveTo(cx - game.winLimit, 0);
+    ctx.lineTo(cx - game.winLimit, H);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(59,130,246,0.45)";
+    ctx.beginPath();
+    ctx.moveTo(cx + game.winLimit, 0);
+    ctx.lineTo(cx + game.winLimit, H);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = "rgba(239,68,68,0.04)";
+    ctx.fillRect(0, 0, cx - game.winLimit, H);
+    ctx.fillStyle = "rgba(59,130,246,0.04)";
+    ctx.fillRect(cx + game.winLimit, 0, W, H);
+}
+
+function drawPlayers(cx, cy) {
+    const rx      = cx + game.ropeX;
+    const spacing = 58;
+    const bodyH   = 46;
+    const headR   = 20;
+    const standY  = cy;
+
+    function drawOne(x, color) {
+        const bodyTop = standY - bodyH / 2;
+
+        ctx.fillStyle = "rgba(0,0,0,0.28)";
+        ctx.beginPath();
+        ctx.roundRect(x - 18 + 3, bodyTop + 4, 36, bodyH, [8]);
+        ctx.fill();
+
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.roundRect(x - 18, bodyTop, 36, bodyH, [8]);
+        ctx.fill();
+
+        const headY = bodyTop - headR - 2;
+
+        ctx.fillStyle = "rgba(0,0,0,0.2)";
+        ctx.beginPath();
+        ctx.arc(x + 2, headY + 3, headR, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#D4A574";
+        ctx.beginPath();
+        ctx.arc(x, headY, headR, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    for (let i = 0; i < game.redCount; i++) {
+        drawOne(rx - 60 - i * spacing, "#ef4444");
+    }
+    for (let i = 0; i < game.blueCount; i++) {
+        drawOne(rx + 60 + i * spacing, "#3b82f6");
+    }
+}
+
+function drawRopeAndKnot(cx, cy) {
+    const rx = cx + game.ropeX;
+
+    ctx.strokeStyle = "rgba(0,0,0,0.5)";
+    ctx.lineWidth   = 16;
+    ctx.beginPath(); ctx.moveTo(0, cy+5); ctx.lineTo(W, cy+5); ctx.stroke();
+
+    ctx.strokeStyle = "#92400e";
+    ctx.lineWidth   = 10;
+    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.07)";
+    ctx.lineWidth   = 3;
+    ctx.beginPath(); ctx.moveTo(0, cy-3); ctx.lineTo(W, cy-3); ctx.stroke();
+
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.beginPath(); ctx.arc(rx+4, cy+6, 20, 0, Math.PI*2); ctx.fill();
+
+    ctx.fillStyle = "#78350f";
+    ctx.beginPath(); ctx.arc(rx, cy, 20, 0, Math.PI*2); ctx.fill();
+
+    ctx.fillStyle = "#92400e";
+    ctx.beginPath(); ctx.arc(rx, cy, 12, 0, Math.PI*2); ctx.fill();
+
+    ctx.fillStyle = "#b45309";
+    ctx.beginPath(); ctx.arc(rx, cy,  6, 0, Math.PI*2); ctx.fill();
+}
+
+function animate() {
+    if (!animating) return;
+    game.ropeX += (game.targetRopeX - game.ropeX) * 0.12;
+    ctx.clearRect(0, 0, W, H);
+
+    const cx = W / 2;
+    const cy = H / 2;
+
+    drawGrid();
+    drawGoalLines(cx, cy);
+    drawPlayers(cx, cy);
+    drawRopeAndKnot(cx, cy);
+
+    requestAnimationFrame(animate);
+}
+</script>
+</body>
+</html>
