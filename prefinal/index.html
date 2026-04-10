@@ -28,7 +28,7 @@
             --hud-h:    36px;
         }
 
-        /* ── Question panels ────────────────────────────────────── */
+        /* ── Panels ─────────────────────────────────────────────── */
         .panel {
             width: 100%;
             height: var(--panel-h);
@@ -64,15 +64,15 @@
         .team-label.red  { background: rgba(239,68,68,0.2);  color: #fca5a5; }
         .team-label.blue { background: rgba(59,130,246,0.2); color: #93c5fd; }
 
-    .q-text {
-        font-size: 14px;
-        font-weight: 700;
-        white-space: normal;
-        overflow: visible;
-        max-width: 220px;
-        line-height: 1.35;
-        text-align: left;
-    }
+        .q-text {
+            font-size: 14px;
+            font-weight: 700;
+            white-space: normal;
+            overflow: visible;
+            max-width: 220px;
+            line-height: 1.35;
+            text-align: left;
+        }
 
         .ans-input {
             width: 240px;
@@ -114,15 +114,11 @@
             align-items: center;
             justify-content: space-between;
             padding: 0 20px;
-            background: rgba(0,0,0,0.45);
+            background: rgba(0,0,0,0.55);
             border-bottom: 1px solid rgba(255,255,255,0.05);
             z-index: 10;
         }
-        #hud-score {
-            font-size: 15px;
-            font-weight: 900;
-            letter-spacing: 0.04em;
-        }
+        #hud-score { font-size: 15px; font-weight: 900; }
         #hud-center {
             display: flex;
             flex-direction: column;
@@ -139,7 +135,6 @@
             font-family: monospace;
             font-size: 16px;
             font-weight: 700;
-            letter-spacing: 0.06em;
         }
 
         /* ── Timer bar ──────────────────────────────────────────── */
@@ -237,7 +232,7 @@
             box-shadow: none;
         }
 
-        /* ── Theme voting grid ──────────────────────────────────── */
+        /* ── Theme grid ─────────────────────────────────────────── */
         #theme-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -245,14 +240,11 @@
             width: 480px;
             margin: 16px 0 20px;
         }
-
-        /* Last theme card centred if odd count */
         #theme-grid .theme-card:last-child:nth-child(odd) {
             grid-column: 1 / -1;
             justify-self: center;
             width: calc(50% - 5px);
         }
-
         .theme-card {
             background: rgba(255,255,255,0.05);
             border: 2px solid rgba(255,255,255,0.1);
@@ -271,25 +263,18 @@
             background: rgba(34,197,94,0.12);
         }
         .theme-card.locked {
-            /* voted and readied — no more changes */
             opacity: 0.7;
             cursor: default;
             pointer-events: none;
         }
-
         .theme-card-top {
             display: flex;
             align-items: center;
             justify-content: space-between;
             margin-bottom: 6px;
         }
-        .theme-name {
-            font-size: 13px;
-            font-weight: 700;
-        }
+        .theme-name  { font-size: 13px; font-weight: 700; }
         .theme-emoji { font-size: 18px; }
-
-        /* Vote bar */
         .vote-bar-wrap {
             height: 4px;
             background: rgba(255,255,255,0.08);
@@ -354,7 +339,7 @@
             <span id="hud-theme"></span>
             <span id="hud-timer">3:00</span>
         </div>
-        <span style="width:160px"></span><!-- spacer to balance score -->
+        <span style="width:160px"></span>
     </div>
 
     <!-- ── Canvas ────────────────────────────────────────────── -->
@@ -414,32 +399,25 @@
             Round 1 — Vote for a theme &amp; ready up
         </p>
 
-        <!-- Teams -->
-        <div class="flex gap-12 mb-6">
+        <div class="flex gap-12 mb-5">
             <div class="text-center">
                 <div class="team-label red inline-block mb-2"
                      id="lobby-red-name">Red Team</div>
-                <div id="lobby-red-players"
-                     class="space-y-1 min-h-[48px]"></div>
+                <div id="lobby-red-players" class="space-y-1 min-h-[48px]"></div>
             </div>
             <div class="text-gray-600 text-3xl font-black self-center">VS</div>
             <div class="text-center">
                 <div class="team-label blue inline-block mb-2"
                      id="lobby-blue-name">Blue Team</div>
-                <div id="lobby-blue-players"
-                     class="space-y-1 min-h-[48px]"></div>
+                <div id="lobby-blue-players" class="space-y-1 min-h-[48px]"></div>
             </div>
         </div>
 
-        <!-- Theme voting -->
         <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">
             Vote for this round's theme
         </p>
-        <div id="theme-grid">
-            <!-- Populated by buildThemeGrid() -->
-        </div>
+        <div id="theme-grid"></div>
 
-        <!-- Ready -->
         <button id="ready-btn" onclick="sendReady()">✅ Ready</button>
         <p id="lobby-status"
            class="text-gray-500 text-sm mt-4 animate-pulse text-center">
@@ -455,11 +433,9 @@
            class="text-gray-500 text-xs uppercase tracking-widest mb-1">
             Round 1
         </p>
-        <p id="re-theme"
-           class="text-gray-600 text-xs uppercase tracking-widest mb-3">
-        </p>
+        <p id="re-theme" class="text-gray-600 text-xs uppercase tracking-widest mb-3"></p>
         <h2 class="text-6xl font-black italic mb-3" id="re-title">—</h2>
-        <p class="text-xl text-gray-300"      id="re-score">—</p>
+        <p class="text-xl text-gray-300" id="re-score">—</p>
         <p class="text-gray-600 text-sm mt-8">Returning to ready room…</p>
     </div>
 
@@ -467,9 +443,7 @@
          SCREEN 4 — Match Over
     ════════════════════════════════════════════════════════ -->
     <div class="overlay" id="screen-match-over" style="display:none;">
-        <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">
-            Match Over
-        </p>
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">Match Over</p>
         <h2 class="text-7xl font-black italic mb-4" id="mo-title">—</h2>
         <p class="text-2xl text-gray-300 mb-1"  id="mo-score">—</p>
         <p class="text-gray-500 text-sm mb-10"  id="mo-time">—</p>
@@ -493,7 +467,7 @@
         <p id="pause-msg" class="text-gray-400 text-center max-w-xs"></p>
     </div>
 
-</div><!-- #root -->
+</div>
 
 <script>
 // ─────────────────────────────────────────────
@@ -512,17 +486,41 @@ function resize() {
 window.addEventListener("resize", resize);
 
 // ─────────────────────────────────────────────
+//  Sprite Loading
+// ─────────────────────────────────────────────
+// ── Tune these constants until alignment feels right ──────────
+const SPRITE_W        = 64;    // rendered width  px
+const SPRITE_H        = 96;    // rendered height px
+const SPRITE_OFFSET_Y = -10;   // shift up(-) / down(+) from rope centre
+const SPRITE_GAP      = 70;    // horizontal gap between players
+const SPRITE_ROPE_GAP = 40;    // gap between knot and nearest player
+
+const sprites = {
+    "red-male":    loadImg("../assets/PlayerM_Red (1).webp"),
+    "red-female":  loadImg("../assets/PlayerF_Red(1).webp"),
+    "blue-male":   loadImg("../assets/PlayerM_Blue (1).webp"),
+    "blue-female": loadImg("../assets/PlayerF_Blue (1).webp"),
+};
+
+const bgImage = loadImg("../assets/BeachBG (1).webp");
+
+function loadImg(src) {
+    const img = new Image();
+    img.src = src;
+    return img;
+}
+
+// ─────────────────────────────────────────────
 //  State
 // ─────────────────────────────────────────────
-let mySide           = null;
-let animating        = false;
-let alreadyReady     = false;
-let myVotedTheme     = null;     // this player's current vote
-let votingLocked     = false;    // true after player clicks Ready
-let availableThemes  = [];
-let themeEmojis      = {};
-let currentTally     = {};       // theme → vote count
-let totalVoters      = 0;        // total players in room (for bar %)
+let mySide          = null;
+let animating       = false;
+let alreadyReady    = false;
+let myVotedTheme    = null;
+let votingLocked    = false;
+let availableThemes = [];
+let themeEmojis     = {};
+let totalVoters     = 0;
 
 const game = {
     active:       false,
@@ -531,8 +529,9 @@ const game = {
     winLimit:     250,
     redScore:     0,
     blueScore:    0,
-    redCount:     0,
-    blueCount:    0,
+    // Sprite lists — arrays of "male"|"female"
+    redSprites:   [],
+    blueSprites:  [],
     currentQ:     null,
     redName:      "Red Team",
     blueName:     "Blue Team",
@@ -596,7 +595,7 @@ function showErr(el, msg) {
 }
 
 // ─────────────────────────────────────────────
-//  Theme Voting UI
+//  Theme Voting
 // ─────────────────────────────────────────────
 function buildThemeGrid(themes, emojis) {
     availableThemes = themes;
@@ -622,19 +621,17 @@ function buildThemeGrid(themes, emojis) {
 }
 
 function updateThemeGrid(tally, total) {
-    currentTally = tally;
-    totalVoters  = total;
-
+    totalVoters = total;
     availableThemes.forEach(t => {
-        const slug   = slugify(t);
-        const count  = tally[t] || 0;
-        const pct    = total > 0 ? (count / total) * 100 : 0;
+        const slug  = slugify(t);
+        const count = tally[t] || 0;
+        const pct   = total > 0 ? (count / total) * 100 : 0;
 
-        const bar    = document.getElementById("vb-" + slug);
-        const label  = document.getElementById("vc-" + slug);
-        const card   = document.getElementById("tc-" + slug);
+        const bar   = document.getElementById("vb-" + slug);
+        const label = document.getElementById("vc-" + slug);
+        const card  = document.getElementById("tc-" + slug);
 
-        if (bar)   bar.style.width = pct + "%";
+        if (bar)   bar.style.width   = pct + "%";
         if (label) label.textContent =
             count === 1 ? "1 vote" : `${count} votes`;
         if (card) {
@@ -647,11 +644,8 @@ function updateThemeGrid(tally, total) {
 function castVote(theme) {
     if (votingLocked) return;
     if (!availableThemes.includes(theme)) return;
-
     myVotedTheme = theme;
     socket.emit("vote-theme", { theme });
-
-    // Optimistic local highlight
     availableThemes.forEach(t => {
         const card = document.getElementById("tc-" + slugify(t));
         if (card) card.classList.toggle("selected", t === theme);
@@ -669,7 +663,6 @@ socket.on("join-response", (res) => {
     if (!res.success) {
         return showErr(document.getElementById("setup-error"), res.message);
     }
-
     mySide        = res.side;
     game.redName  = res.redName;
     game.blueName = res.blueName;
@@ -679,17 +672,12 @@ socket.on("join-response", (res) => {
     document.getElementById("lobby-red-name").textContent  = res.redName;
     document.getElementById("lobby-blue-name").textContent = res.blueName;
 
-    // Build initial theme grid
     buildThemeGrid(res.availableThemes, res.themeEmojis);
-
     showScreen("screen-lobby");
 });
 
 socket.on("lobby-update", (data) => {
-    game.redCount  = data.redPlayers.length;
-    game.blueCount = data.bluePlayers.length;
-    totalVoters    = data.redPlayers.length + data.bluePlayers.length;
-
+    totalVoters = data.redPlayers.length + data.bluePlayers.length;
     renderLobbyList("lobby-red-players",  data.redPlayers,  "red");
     renderLobbyList("lobby-blue-players", data.bluePlayers, "blue");
 });
@@ -700,7 +688,6 @@ socket.on("vote-update", (data) => {
 
 socket.on("ready-blocked", (data) => {
     showToast("⚠️ " + data.message);
-    // Shake the theme grid to draw attention
     const grid = document.getElementById("theme-grid");
     grid.style.outline = "2px solid #ef4444";
     setTimeout(() => grid.style.outline = "none", 1200);
@@ -710,15 +697,13 @@ socket.on("go-to-ready", (data) => {
     game.redName  = data.redName;
     game.blueName = data.blueName;
 
-    // Reset voting state
-    alreadyReady  = false;
-    myVotedTheme  = null;
-    votingLocked  = false;
+    alreadyReady = false;
+    myVotedTheme = null;
+    votingLocked = false;
 
     const btn = document.getElementById("ready-btn");
     btn.classList.remove("pressed");
     btn.textContent = "✅ Ready";
-
     document.getElementById("lobby-round-label").textContent =
         `Round ${data.round} — Vote for a theme & ready up`;
     document.getElementById("lobby-status").textContent =
@@ -726,11 +711,9 @@ socket.on("go-to-ready", (data) => {
     document.getElementById("lobby-red-name").textContent  = data.redName;
     document.getElementById("lobby-blue-name").textContent = data.blueName;
 
-    // Rebuild theme grid with remaining themes
     buildThemeGrid(data.availableThemes, data.themeEmojis);
     updateThemeGrid({}, 0);
 
-    // Hide game chrome
     document.getElementById("panel-red").style.display  = "none";
     document.getElementById("panel-blue").style.display = "none";
     document.getElementById("hud").style.display        = "none";
@@ -750,8 +733,9 @@ socket.on("start-round", (data) => {
     game.winLimit     = data.winLimit;
     game.currentTheme = data.theme;
     game.themeEmoji   = data.themeEmoji;
+    game.redSprites   = data.redSprites;   // ["male","female",...]
+    game.blueSprites  = data.blueSprites;
 
-    // Hard reset rope
     game.ropeX       = 0;
     game.targetRopeX = 0;
 
@@ -799,8 +783,7 @@ socket.on("round-end", (data) => {
     game.redScore  = data.redScore;
     game.blueScore = data.blueScore;
 
-    document.getElementById("re-round-label").textContent =
-        `Round ${data.round}`;
+    document.getElementById("re-round-label").textContent = `Round ${data.round}`;
     document.getElementById("re-theme").textContent =
         (game.themeEmoji ? game.themeEmoji + " " : "") + data.theme;
 
@@ -837,7 +820,7 @@ socket.on("match-over", (data) => {
     }
     score.textContent =
         `${data.redName}  ${data.redScore} — ${data.blueScore}  ${data.blueName}`;
-    time.textContent  = `Total round time: ${fmtTime(data.inTime)}`;
+    time.textContent = `Total round time: ${fmtTime(data.inTime)}`;
 
     showScreen("screen-match-over");
 });
@@ -857,7 +840,6 @@ socket.on("question-skipped", () => {
 // ─────────────────────────────────────────────
 function sendReady() {
     if (alreadyReady) return;
-    // Vote check is enforced server-side too, but give instant feedback
     if (!myVotedTheme) {
         showToast("⚠️ Vote for a theme first!");
         const grid = document.getElementById("theme-grid");
@@ -869,7 +851,6 @@ function sendReady() {
     alreadyReady = true;
     votingLocked = true;
 
-    // Lock cards visually
     availableThemes.forEach(t => {
         const card = document.getElementById("tc-" + slugify(t));
         if (card) card.classList.add("locked");
@@ -935,6 +916,8 @@ function playAgain() {
     game.targetRopeX = 0;
     game.redScore    = 0;
     game.blueScore   = 0;
+    game.redSprites  = [];
+    game.blueSprites = [];
 
     document.getElementById("panel-red").style.display  = "none";
     document.getElementById("panel-blue").style.display = "none";
@@ -952,25 +935,22 @@ function playAgain() {
 //  HUD
 // ─────────────────────────────────────────────
 function updateHUD() {
-    const scoreEl = document.getElementById("hud-score");
-    const themeEl = document.getElementById("hud-theme");
-    const timerEl = document.getElementById("hud-timer");
-
-    scoreEl.innerHTML =
+    document.getElementById("hud-score").innerHTML =
         `<span style="color:#f87171">${esc(game.redName)}</span>` +
         `<span style="color:#6b7280;margin:0 8px">` +
             `${game.redScore} — ${game.blueScore}` +
         `</span>` +
         `<span style="color:#60a5fa">${esc(game.blueName)}</span>`;
 
-    themeEl.textContent =
+    document.getElementById("hud-theme").textContent =
         game.themeEmoji + " " + game.currentTheme;
 
     const s   = game.secondsLeft;
     const m   = Math.floor(s / 60);
     const sec = String(s % 60).padStart(2, "0");
-    timerEl.textContent = `${m}:${sec}`;
-    timerEl.style.color =
+    const el  = document.getElementById("hud-timer");
+    el.textContent = `${m}:${sec}`;
+    el.style.color =
         s > 60 ? "#d1d5db" :
         s > 20 ? "#facc15" : "#ef4444";
 }
@@ -1039,122 +1019,117 @@ function esc(str) {
 // ─────────────────────────────────────────────
 //  Drawing
 // ─────────────────────────────────────────────
-function drawGrid() {
-    ctx.strokeStyle = "rgba(255,255,255,0.025)";
-    ctx.lineWidth   = 1;
-    for (let x = 0; x < W; x += 60) {
-        ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
-    }
-    for (let y = 0; y < H; y += 60) {
-        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+function drawBackground() {
+    if (bgImage.complete && bgImage.naturalWidth > 0) {
+        // Cover the canvas maintaining aspect ratio
+        const imgRatio    = bgImage.naturalWidth / bgImage.naturalHeight;
+        const canvasRatio = W / H;
+        let sw, sh, sx, sy;
+
+        if (canvasRatio > imgRatio) {
+            sw = bgImage.naturalWidth;
+            sh = bgImage.naturalWidth / canvasRatio;
+            sx = 0;
+            sy = (bgImage.naturalHeight - sh) / 2;
+        } else {
+            sh = bgImage.naturalHeight;
+            sw = bgImage.naturalHeight * canvasRatio;
+            sx = (bgImage.naturalWidth - sw) / 2;
+            sy = 0;
+        }
+        ctx.drawImage(bgImage, sx, sy, sw, sh, 0, 0, W, H);
+    } else {
+        // Fallback solid colour while image loads
+        ctx.fillStyle = "#0a1628";
+        ctx.fillRect(0, 0, W, H);
     }
 }
 
-function drawGoalLines(cx, cy) {
+function drawGoalLines(cx) {
     ctx.lineWidth = 3;
     ctx.setLineDash([10, 8]);
 
-    ctx.strokeStyle = "rgba(239,68,68,0.45)";
+    ctx.strokeStyle = "rgba(239,68,68,0.6)";
     ctx.beginPath();
     ctx.moveTo(cx - game.winLimit, 0);
     ctx.lineTo(cx - game.winLimit, H);
     ctx.stroke();
 
-    ctx.strokeStyle = "rgba(59,130,246,0.45)";
+    ctx.strokeStyle = "rgba(59,130,246,0.6)";
     ctx.beginPath();
     ctx.moveTo(cx + game.winLimit, 0);
     ctx.lineTo(cx + game.winLimit, H);
     ctx.stroke();
 
     ctx.setLineDash([]);
-
-    ctx.fillStyle = "rgba(239,68,68,0.04)";
-    ctx.fillRect(0, 0, cx - game.winLimit, H);
-    ctx.fillStyle = "rgba(59,130,246,0.04)";
-    ctx.fillRect(cx + game.winLimit, 0, W, H);
 }
 
-function drawPlayers(cx, cy) {
-    const rx      = cx + game.ropeX;
-    const spacing = 58;
-    const bodyH   = 46;
-    const headR   = 20;
-    const standY  = cy;
+function drawSprites(cx, cy) {
+    const rx = cx + game.ropeX;
 
-    function drawOne(x, color) {
-        const bodyTop = standY - bodyH / 2;
+    // Red players — stacked left of knot, inward first
+    game.redSprites.forEach((gender, i) => {
+        const img = sprites["red-" + gender];
+        if (!img.complete || !img.naturalWidth) return;
 
-        ctx.fillStyle = "rgba(0,0,0,0.28)";
-        ctx.beginPath();
-        ctx.roundRect(x - 18 + 3, bodyTop + 4, 36, bodyH, [8]);
-        ctx.fill();
+        const x = rx - SPRITE_ROPE_GAP - SPRITE_W / 2 - i * SPRITE_GAP;
+        const y = cy + SPRITE_OFFSET_Y - SPRITE_H / 2;
+        ctx.drawImage(img, x, y, SPRITE_W, SPRITE_H);
+    });
 
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.roundRect(x - 18, bodyTop, 36, bodyH, [8]);
-        ctx.fill();
+    // Blue players — stacked right of knot, inward first
+    game.blueSprites.forEach((gender, i) => {
+        const img = sprites["blue-" + gender];
+        if (!img.complete || !img.naturalWidth) return;
 
-        const headY = bodyTop - headR - 2;
-
-        ctx.fillStyle = "rgba(0,0,0,0.2)";
-        ctx.beginPath();
-        ctx.arc(x + 2, headY + 3, headR, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = "#D4A574";
-        ctx.beginPath();
-        ctx.arc(x, headY, headR, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    for (let i = 0; i < game.redCount; i++) {
-        drawOne(rx - 60 - i * spacing, "#ef4444");
-    }
-    for (let i = 0; i < game.blueCount; i++) {
-        drawOne(rx + 60 + i * spacing, "#3b82f6");
-    }
+        const x = rx + SPRITE_ROPE_GAP - SPRITE_W / 2 + i * SPRITE_GAP;
+        const y = cy + SPRITE_OFFSET_Y - SPRITE_H / 2;
+        ctx.drawImage(img, x, y, SPRITE_W, SPRITE_H);
+    });
 }
 
 function drawRopeAndKnot(cx, cy) {
     const rx = cx + game.ropeX;
 
+    // Shadow
     ctx.strokeStyle = "rgba(0,0,0,0.5)";
     ctx.lineWidth   = 16;
     ctx.beginPath(); ctx.moveTo(0, cy+5); ctx.lineTo(W, cy+5); ctx.stroke();
-
+    // Rope
     ctx.strokeStyle = "#92400e";
     ctx.lineWidth   = 10;
     ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
-
+    // Highlight
     ctx.strokeStyle = "rgba(255,255,255,0.07)";
     ctx.lineWidth   = 3;
     ctx.beginPath(); ctx.moveTo(0, cy-3); ctx.lineTo(W, cy-3); ctx.stroke();
 
+    // Knot shadow
     ctx.fillStyle = "rgba(0,0,0,0.45)";
     ctx.beginPath(); ctx.arc(rx+4, cy+6, 20, 0, Math.PI*2); ctx.fill();
-
+    // Knot
     ctx.fillStyle = "#78350f";
     ctx.beginPath(); ctx.arc(rx, cy, 20, 0, Math.PI*2); ctx.fill();
-
     ctx.fillStyle = "#92400e";
     ctx.beginPath(); ctx.arc(rx, cy, 12, 0, Math.PI*2); ctx.fill();
-
     ctx.fillStyle = "#b45309";
     ctx.beginPath(); ctx.arc(rx, cy,  6, 0, Math.PI*2); ctx.fill();
 }
 
 function animate() {
     if (!animating) return;
+
     game.ropeX += (game.targetRopeX - game.ropeX) * 0.12;
+
     ctx.clearRect(0, 0, W, H);
 
     const cx = W / 2;
     const cy = H / 2;
 
-    drawGrid();
-    drawGoalLines(cx, cy);
-    drawPlayers(cx, cy);
-    drawRopeAndKnot(cx, cy);
+    drawBackground();            // 1. bg image (no grid)
+    drawGoalLines(cx);           // 2. goal lines on top of bg
+    drawSprites(cx, cy);         // 3. sprites behind rope
+    drawRopeAndKnot(cx, cy);     // 4. rope on top of everything
 
     requestAnimationFrame(animate);
 }
