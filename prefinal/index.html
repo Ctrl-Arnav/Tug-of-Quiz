@@ -1077,7 +1077,7 @@ function drawSprites(cx, cy) {
         const img = sprites["red-" + gender];
         if (!img.complete || !img.naturalWidth) return;
 
-        const x = rx - SPRITE_ROPE_GAP - SPRITE_W - i * SPRITE_W;
+        const x = rx - SPRITE_ROPE_GAP - SPRITE_W - i * (SPRITE_W + SPRITE_GAP);
         const y = cy + SPRITE_OFFSET_Y - SPRITE_H / 2;
         ctx.drawImage(img, x, y, SPRITE_W, SPRITE_H);
     });
@@ -1087,7 +1087,7 @@ function drawSprites(cx, cy) {
         const img = sprites["blue-" + gender];
         if (!img.complete || !img.naturalWidth) return;
 
-        const x = rx + SPRITE_ROPE_GAP + i * SPRITE_W;
+        const x = rx - SPRITE_ROPE_GAP - SPRITE_W - i * (SPRITE_W + SPRITE_GAP);
         const y = cy + SPRITE_OFFSET_Y - SPRITE_H / 2;
 
         ctx.save();
