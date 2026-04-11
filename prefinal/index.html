@@ -496,7 +496,19 @@ const SPRITE_W        = 144;  // 1:1 ratio, doubled size
 const SPRITE_H        = 144;  // same as width
 const SPRITE_OFFSET_Y = -10;  // shift up(-) or down(+) from rope centre
 const SPRITE_GAP      = -58;    // no gap between players
-const SPRITE_ROPE_GAP = 70;   // gap between knot edge and nearest sprite
+const SPRITE_ROPE_GAP = 70;
+
+// ── Hand constants ───────────────────────────────────────────────
+const HAND_W         = 64;    // rendered width  of each hand
+const HAND_H         = 64;    // rendered height of each hand
+const HAND_OFFSET_X  = 10;    // horizontal nudge inward toward rope per hand
+const HAND_OFFSET_Y  = 0;     // vertical shift from rope centre
+
+// ── Ribbon constants (replaces knot circle) ──────────────────────
+const RIBBON_W       = 96;    // rendered width
+const RIBBON_H       = 96;    // rendered height
+const RIBBON_OFFSET_X = 0;    // horizontal nudge from knot centre
+const RIBBON_OFFSET_Y = 0;    // vertical nudge from knot centre
 
 // ─────────────────────────────────────────────
 //  Asset Loading
@@ -506,8 +518,10 @@ const sprites = {
     "red-female":  loadImg("../assets/PlayerF_Red(1).webp"),
     "blue-male":   loadImg("../assets/PlayerM_Blue (1).webp"),
     "blue-female": loadImg("../assets/PlayerF_Blue (1).webp"),
+    "hand":        loadImg("../assets/hand(1).webp"),
 };
-const bgImage = loadImg("../assets/BeachBG (1).webp");
+const bgImage     = loadImg("../assets/BeachBG (1).webp");
+const ribbonImage = loadImg("../assets/ribbon (1).webp");
 
 function loadImg(src) {
     const img = new Image();
@@ -1069,10 +1083,11 @@ function drawGoalLines(cx) {
     ctx.setLineDash([]);
 }
 
+// Pass 1 — player bodies, drawn BEFORE rope
 function drawSprites(cx, cy) {
     const rx = cx + game.ropeX;
 
-    // Red — left of knot, no transform needed
+    // Red — left of knot
     game.redSprites.forEach((gender, i) => {
         const img = sprites["red-" + gender];
         if (!img.complete || !img.naturalWidth) return;
@@ -1082,21 +1097,47 @@ function drawSprites(cx, cy) {
         ctx.drawImage(img, x, y, SPRITE_W, SPRITE_H);
     });
 
-    // Blue — right of knot, flipped horizontally
+    // Blue — right of knot, flipped
     game.blueSprites.forEach((gender, i) => {
         const img = sprites["blue-" + gender];
         if (!img.complete || !img.naturalWidth) return;
 
-        // x is the left edge of where this sprite slot starts
-        // going rightward from the knot
         const x = rx + SPRITE_ROPE_GAP + i * (SPRITE_W + SPRITE_GAP);
         const y = cy + SPRITE_OFFSET_Y - SPRITE_H / 2;
 
         ctx.save();
-        // Flip around the centre of this specific sprite
         ctx.translate(x + SPRITE_W / 2, 0);
         ctx.scale(-1, 1);
         ctx.drawImage(img, -SPRITE_W / 2, y, SPRITE_W, SPRITE_H);
+        ctx.restore();
+    });
+}
+
+// Pass 2 — hands only, drawn AFTER rope so they appear on top
+function drawHands(cx, cy) {
+    const rx      = cx + game.ropeX;
+    const handImg = sprites["hand"];
+    if (!handImg.complete || !handImg.naturalWidth) return;
+
+    // Red hands — one per player, near rope on right side of each sprite
+    game.redSprites.forEach((_, i) => {
+        // Centre of this player's sprite
+        const spriteX = rx - SPRITE_ROPE_GAP - SPRITE_W - i * (SPRITE_W + SPRITE_GAP);
+        const handX   = spriteX + SPRITE_W - HAND_W / 2 - HAND_OFFSET_X;
+        const handY   = cy + HAND_OFFSET_Y - HAND_H / 2;
+        ctx.drawImage(handImg, handX, handY, HAND_W, HAND_H);
+    });
+
+    // Blue hands — flipped, near rope on left side of each sprite
+    game.blueSprites.forEach((_, i) => {
+        const spriteX = rx + SPRITE_ROPE_GAP + i * (SPRITE_W + SPRITE_GAP);
+        const handX   = spriteX - HAND_W / 2 + HAND_OFFSET_X;
+        const handY   = cy + HAND_OFFSET_Y - HAND_H / 2;
+
+        ctx.save();
+        ctx.translate(handX + HAND_W / 2, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(handImg, -HAND_W / 2, handY, HAND_W, HAND_H);
         ctx.restore();
     });
 }
@@ -1119,17 +1160,16 @@ function drawRopeAndKnot(cx, cy) {
     ctx.lineWidth   = 3;
     ctx.beginPath(); ctx.moveTo(0, cy - 3); ctx.lineTo(W, cy - 3); ctx.stroke();
 
-    // Knot shadow
-    ctx.fillStyle = "rgba(0,0,0,0.45)";
-    ctx.beginPath(); ctx.arc(rx + 4, cy + 6, 20, 0, Math.PI * 2); ctx.fill();
-
-    // Knot
-    ctx.fillStyle = "#78350f";
-    ctx.beginPath(); ctx.arc(rx, cy, 20, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#92400e";
-    ctx.beginPath(); ctx.arc(rx, cy, 12, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#b45309";
-    ctx.beginPath(); ctx.arc(rx, cy,  6, 0, Math.PI * 2); ctx.fill();
+    // Ribbon replacing the knot circles
+    if (ribbonImage.complete && ribbonImage.naturalWidth > 0) {
+        ctx.drawImage(
+            ribbonImage,
+            rx + RIBBON_OFFSET_X - RIBBON_W / 2,
+            cy  + RIBBON_OFFSET_Y - RIBBON_H / 2,
+            RIBBON_W,
+            RIBBON_H
+        );
+    }
 }
 
 function animate() {
@@ -1144,8 +1184,9 @@ function animate() {
 
     drawBackground();        // 1. bg
     drawGoalLines(cx);       // 2. goal lines
-    drawSprites(cx, cy);     // 3. sprites behind rope
-    drawRopeAndKnot(cx, cy); // 4. rope on top
+    drawSprites(cx, cy);     // 3. player bodies behind rope
+    drawRopeAndKnot(cx, cy); // 4. rope + ribbon
+    drawHands(cx, cy);       // 5. hands on top of rope // 4. rope on top
 
     requestAnimationFrame(animate);
 }
