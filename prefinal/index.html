@@ -499,8 +499,8 @@ const SPRITE_GAP      = -58;    // no gap between players
 const SPRITE_ROPE_GAP = 70;
 
 // ── Hand constants ───────────────────────────────────────────────
-const HAND_W         = 64;    // rendered width  of each hand
-const HAND_H         = 64;    // rendered height of each hand
+const HAND_W         = 16;    // rendered width  of each hand
+const HAND_H         = 16;    // rendered height of each hand
 const HAND_OFFSET_X  = 10;    // horizontal nudge inward toward rope per hand
 const HAND_OFFSET_Y  = 0;     // vertical shift from rope centre
 
@@ -508,7 +508,7 @@ const HAND_OFFSET_Y  = 0;     // vertical shift from rope centre
 const RIBBON_W       = 96;    // rendered width
 const RIBBON_H       = 96;    // rendered height
 const RIBBON_OFFSET_X = 0;    // horizontal nudge from knot centre
-const RIBBON_OFFSET_Y = 0;    // vertical nudge from knot centre
+const RIBBON_OFFSET_Y = -64;    // vertical nudge from knot centre
 
 // ─────────────────────────────────────────────
 //  Asset Loading
@@ -1119,25 +1119,29 @@ function drawHands(cx, cy) {
     const handImg = sprites["hand"];
     if (!handImg.complete || !handImg.naturalWidth) return;
 
-    // Red hands — one per player, near rope on right side of each sprite
+    // Red hands — two per player, side by side, no gap
     game.redSprites.forEach((_, i) => {
-        // Centre of this player's sprite
         const spriteX = rx - SPRITE_ROPE_GAP - SPRITE_W - i * (SPRITE_W + SPRITE_GAP);
-        const handX   = spriteX + SPRITE_W - HAND_W / 2 - HAND_OFFSET_X;
+        const hand1X  = spriteX + SPRITE_W - HAND_W / 2 - HAND_OFFSET_X;
+        const hand2X  = hand1X + HAND_W;   // immediately next to first, no gap
         const handY   = cy + HAND_OFFSET_Y - HAND_H / 2;
-        ctx.drawImage(handImg, handX, handY, HAND_W, HAND_H);
+
+        ctx.drawImage(handImg, hand1X, handY, HAND_W, HAND_H);
+        ctx.drawImage(handImg, hand2X, handY, HAND_W, HAND_H);
     });
 
-    // Blue hands — flipped, near rope on left side of each sprite
+    // Blue hands — two per player, flipped, side by side, no gap
     game.blueSprites.forEach((_, i) => {
         const spriteX = rx + SPRITE_ROPE_GAP + i * (SPRITE_W + SPRITE_GAP);
-        const handX   = spriteX - HAND_W / 2 + HAND_OFFSET_X;
+        const hand1X  = spriteX - HAND_W / 2 + HAND_OFFSET_X;
+        const hand2X  = hand1X - HAND_W;   // immediately next to first, no gap
         const handY   = cy + HAND_OFFSET_Y - HAND_H / 2;
 
         ctx.save();
-        ctx.translate(handX + HAND_W / 2, 0);
+        ctx.translate(hand1X + HAND_W / 2, 0);
         ctx.scale(-1, 1);
-        ctx.drawImage(handImg, -HAND_W / 2, handY, HAND_W, HAND_H);
+        ctx.drawImage(handImg, -HAND_W / 2,        handY, HAND_W, HAND_H);
+        ctx.drawImage(handImg, -HAND_W / 2 - HAND_W, handY, HAND_W, HAND_H);
         ctx.restore();
     });
 }
