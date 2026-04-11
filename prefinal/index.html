@@ -899,10 +899,13 @@ document.addEventListener("keydown", e => {
 function checkAns() {
     if (!game.active || !game.currentQ) return;
     const inp     = document.getElementById("inp-" + mySide);
-    const userAns = inp.value.trim().toLowerCase();
-    const correct = game.currentQ.a.toString().toLowerCase();
 
-    if (userAns === correct) {
+    // Strip special characters, keep only a-z 0-9 and spaces
+    const userAns = inp.value.trim().toLowerCase().replace(/[^a-z0-9 ]/g, "");
+    const correct = game.currentQ.a.toString().toLowerCase();
+    const acceptedAnswers = correct.split("//").map(s => s.trim());
+
+    if (acceptedAnswers.includes(userAns)) {
         flashInput(inp, "flash-correct");
         socket.emit("pull");
         inp.value = "";
