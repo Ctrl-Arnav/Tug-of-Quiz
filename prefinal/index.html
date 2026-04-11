@@ -508,7 +508,7 @@ const HAND_OFFSET_Y  = 0;     // vertical shift from rope centre
 const RIBBON_W       = 96;    // rendered width
 const RIBBON_H       = 96;    // rendered height
 const RIBBON_OFFSET_X = 0;    // horizontal nudge from knot centre
-const RIBBON_OFFSET_Y = 46;    // vertical nudge from knot centre
+const RIBBON_OFFSET_Y = 36;    // vertical nudge from knot centre
 
 // ─────────────────────────────────────────────
 //  Asset Loading
@@ -1068,16 +1068,19 @@ function drawGoalLines(cx) {
     ctx.lineWidth = 3;
     ctx.setLineDash([10, 8]);
 
+    const topY    = H * 0.25;   // starts quarter way down
+    const bottomY = H * 0.75;   // ends quarter way up
+
     ctx.strokeStyle = "rgba(239,68,68,0.6)";
     ctx.beginPath();
-    ctx.moveTo(cx - game.winLimit, 0);
-    ctx.lineTo(cx - game.winLimit, H);
+    ctx.moveTo(cx - game.winLimit, topY);
+    ctx.lineTo(cx - game.winLimit, bottomY);
     ctx.stroke();
 
     ctx.strokeStyle = "rgba(59,130,246,0.6)";
     ctx.beginPath();
-    ctx.moveTo(cx + game.winLimit, 0);
-    ctx.lineTo(cx + game.winLimit, H);
+    ctx.moveTo(cx + game.winLimit, topY);
+    ctx.lineTo(cx + game.winLimit, bottomY);
     ctx.stroke();
 
     ctx.setLineDash([]);
@@ -1121,10 +1124,12 @@ function drawHands(cx, cy) {
 
     // Red hands — two per player, side by side, no gap
     game.redSprites.forEach((_, i) => {
-        const spriteX = rx - SPRITE_ROPE_GAP - SPRITE_W - i * (SPRITE_W + SPRITE_GAP);
-        const hand1X  = spriteX + SPRITE_W - HAND_W / 2 - HAND_OFFSET_X;
-        const hand2X  = hand1X + HAND_W;   // immediately next to first, no gap
-        const handY   = cy + HAND_OFFSET_Y - HAND_H / 2;
+        const spriteX   = rx - SPRITE_ROPE_GAP - SPRITE_W - i * (SPRITE_W + SPRITE_GAP);
+        const padding   = SPRITE_W * 0.20;   // 20% transparent edge
+        // Anchor hands to right edge of visible body, not image edge
+        const hand1X    = spriteX + SPRITE_W - padding - HAND_W - HAND_OFFSET_X;
+        const hand2X    = hand1X + HAND_W;
+        const handY     = cy + HAND_OFFSET_Y - HAND_H / 2;
 
         ctx.drawImage(handImg, hand1X, handY, HAND_W, HAND_H);
         ctx.drawImage(handImg, hand2X, handY, HAND_W, HAND_H);
