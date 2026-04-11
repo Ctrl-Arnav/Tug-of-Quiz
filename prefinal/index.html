@@ -508,7 +508,7 @@ const HAND_OFFSET_Y  = 0;     // vertical shift from rope centre
 const RIBBON_W       = 96;    // rendered width
 const RIBBON_H       = 96;    // rendered height
 const RIBBON_OFFSET_X = 0;    // horizontal nudge from knot centre
-const RIBBON_OFFSET_Y = 36;    // vertical nudge from knot centre
+const RIBBON_OFFSET_Y = 30;    // vertical nudge from knot centre
 
 // ─────────────────────────────────────────────
 //  Asset Loading
@@ -1068,8 +1068,8 @@ function drawGoalLines(cx) {
     ctx.lineWidth = 3;
     ctx.setLineDash([10, 8]);
 
-    const topY    = H * 0.25;   // starts quarter way down
-    const bottomY = H * 0.75;   // ends quarter way up
+    const topY    = H * 0.5;   // starts half way down
+    const bottomY = H * 0.9;   // ends
 
     ctx.strokeStyle = "rgba(239,68,68,0.6)";
     ctx.beginPath();
